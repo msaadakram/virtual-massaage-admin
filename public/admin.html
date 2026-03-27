@@ -140,7 +140,7 @@
           <h3>Send Notice</h3>
 
           <label class="label">Backend URL</label>
-          <input id="baseUrl" value="http://localhost:3000" />
+          <input id="baseUrl" value="" placeholder="Auto: current domain" />
 
           <label class="label">Admin Token</label>
           <input id="adminToken" type="password" placeholder="x-admin-token" />
@@ -225,8 +225,10 @@
         set(k, v) { localStorage.setItem(`vu-admin-${k}`, v || ''); },
       };
 
+      const defaultBaseUrl = window.location?.origin || 'https://virtual-massaage-admin.vercel.app';
+
       function baseUrl() {
-        return (els.baseUrl.value || 'http://localhost:3000').replace(/\/+$/, '');
+        return (els.baseUrl.value || defaultBaseUrl).replace(/\/+$/, '');
       }
 
       function setStatus(text, isError = false) {
