@@ -1,0 +1,24 @@
+[
+  {
+    "id": "abc33dd5-33c3-4053-92da-503e093d60a5",
+    "text": "Test notice for paid project group",
+    "mediaUrl": "",
+    "mediaType": "text",
+    "senderRole": "admin",
+    "senderName": "VU Admin",
+    "section": "paid-project",
+    "targetGroup": "paid-project-team",
+    "createdAt": "2026-03-27T08:11:11.418Z"
+  },
+  {
+    "id": "0f667c10-f7ef-4c93-898e-e58d9bcdfe15",
+    "text": "hi",
+    "mediaUrl": "",
+    "mediaType": "text",
+    "senderRole": "admin",
+    "senderName": "VU Admin",
+    "section": "general",
+    "targetGroup": "all",
+    "createdAt": "2026-03-27T08:37:44.906Z"
+  }
+]

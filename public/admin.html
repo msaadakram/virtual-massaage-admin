@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VU Notice Admin</title>
+    <style>
+      :root {
+        --bg: #0c1215;
+        --card: #142126;
+        --card-soft: #1a2b31;
+        --accent: #39b9a9;
+        --text: #e4eef2;
+        --muted: #9eb0b8;
+        --danger: #ff6b6b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Inter, Arial, sans-serif;
+        background: radial-gradient(circle at top, #13252c, var(--bg));
+        color: var(--text);
+      }
+      .wrap {
+        max-width: 1020px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .title {
+        font-size: 28px;
+        font-weight: 800;
+        margin: 0 0 14px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+      @media (min-width: 920px) {
+        .grid { grid-template-columns: 1.2fr 1fr; }
+      }
+      .card {
+        background: linear-gradient(135deg, var(--card), var(--card-soft));
+        border: 1px solid #2d464f;
+        border-radius: 16px;
+        padding: 14px;
+      }
+      .label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin: 8px 0 6px;
+      }
+      input, select, textarea, button {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid #34515c;
+        background: #102026;
+        color: var(--text);
+        padding: 10px 12px;
+        font: inherit;
+      }
+      textarea { min-height: 110px; resize: vertical; }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      @media (min-width: 680px) {
+        .row.three { grid-template-columns: repeat(3, 1fr); }
+        .row.two { grid-template-columns: repeat(2, 1fr); }
+      }
+      button {
+        cursor: pointer;
+        background: linear-gradient(135deg, #2ca997, var(--accent));
+        color: #072623;
+        font-weight: 800;
+      }
+      .btn-secondary {
+        background: #1d3138;
+        color: var(--text);
+      }
+      .status {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 10px;
+        background: #1a2f36;
+        color: var(--muted);
+        font-size: 13px;
+        white-space: pre-wrap;
+      }
+      .danger { color: var(--danger); }
+      .list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 10px;
+        max-height: 580px;
+        overflow: auto;
+      }
+      .item {
+        background: #0f1c21;
+        border: 1px solid #27414a;
+        border-radius: 12px;
+        padding: 10px;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 6px;
+      }
+      .chip {
+        font-size: 11px;
+        border-radius: 999px;
+        padding: 4px 8px;
+        background: #16323a;
+        color: #b9d4dc;
+      }
+      a { color: #8adcf7; }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .muted { color: var(--muted); font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="topbar">
+        <h1 class="title">VU Notice Admin Dashboard</h1>
+        <div class="muted">Route: <code>/admin</code></div>
+      </div>
+
+      <div class="grid">
+        <section class="card">
+          <h3>Send Notice</h3>
+
+          <label class="label">Backend URL</label>
+          <input id="baseUrl" value="http://localhost:3000" />
+
+          <label class="label">Admin Token</label>
+          <input id="adminToken" type="password" placeholder="x-admin-token" />
+
+          <label class="label">Sender Name</label>
+          <input id="senderName" value="VU Admin" />
+
+          <div class="row three">
+            <div>
+              <label class="label">Notice Section</label>
+              <select id="section"></select>
+            </div>
+            <div>
+              <label class="label">Target Group</label>
+              <select id="targetGroup"></select>
+            </div>
+            <div>
+              <label class="label">Media Type</label>
+              <select id="mediaType">
+                <option value="">Auto</option>
+                <option value="image">Image</option>
+                <option value="video">Video</option>
+                <option value="audio">Audio</option>
+                <option value="file">File</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="label">Message Text</label>
+          <textarea id="text" placeholder="Write your notice message..."></textarea>
+
+          <label class="label">Upload Media (optional)</label>
+          <input id="mediaFile" type="file" />
+
+          <div class="row two" style="margin-top: 12px;">
+            <button id="sendBtn">Send Notice</button>
+            <button id="refreshBtn" class="btn-secondary" type="button">Refresh Messages</button>
+          </div>
+
+          <div id="status" class="status">Ready</div>
+        </section>
+
+        <section class="card">
+          <h3>Recent Notices</h3>
+
+          <div class="row two">
+            <div>
+              <label class="label">Filter Section</label>
+              <select id="filterSection"></select>
+            </div>
+            <div>
+              <label class="label">Filter Group</label>
+              <select id="filterGroup"></select>
+            </div>
+          </div>
+
+          <div id="messages" class="list"></div>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      const els = {
+        baseUrl: document.getElementById('baseUrl'),
+        adminToken: document.getElementById('adminToken'),
+        senderName: document.getElementById('senderName'),
+        section: document.getElementById('section'),
+        targetGroup: document.getElementById('targetGroup'),
+        mediaType: document.getElementById('mediaType'),
+        text: document.getElementById('text'),
+        mediaFile: document.getElementById('mediaFile'),
+        sendBtn: document.getElementById('sendBtn'),
+        refreshBtn: document.getElementById('refreshBtn'),
+        status: document.getElementById('status'),
+        filterSection: document.getElementById('filterSection'),
+        filterGroup: document.getElementById('filterGroup'),
+        messages: document.getElementById('messages'),
+      };
+
+      const storage = {
+        get(k, fallback = '') { return localStorage.getItem(`vu-admin-${k}`) || fallback; },
+        set(k, v) { localStorage.setItem(`vu-admin-${k}`, v || ''); },
+      };
+
+      function baseUrl() {
+        return (els.baseUrl.value || 'http://localhost:3000').replace(/\/+$/, '');
+      }
+
+      function setStatus(text, isError = false) {
+        els.status.textContent = text;
+        els.status.classList.toggle('danger', Boolean(isError));
+      }
+
+      function addOptions(select, items) {
+        select.innerHTML = '';
+        for (const item of items) {
+          const o = document.createElement('option');
+          o.value = item.key;
+          o.textContent = item.label;
+          select.appendChild(o);
+        }
+      }
+
+      async function api(path, options = {}) {
+        const url = `${baseUrl()}${path}`;
+        const headers = { ...(options.headers || {}) };
+        const token = els.adminToken.value.trim();
+        if (token) headers['x-admin-token'] = token;
+
+        const response = await fetch(url, { ...options, headers });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || `Request failed (${response.status})`);
+        }
+        return data;
+      }
+
+      async function loadMeta() {
+        const meta = await api('/api/meta', { headers: { accept: 'application/json' } });
+        addOptions(els.section, meta.sections);
+        addOptions(els.targetGroup, meta.groups);
+        addOptions(els.filterSection, meta.sections);
+        addOptions(els.filterGroup, meta.groups);
+
+        els.section.value = storage.get('section', 'general');
+        els.targetGroup.value = storage.get('targetGroup', 'all');
+        els.filterSection.value = storage.get('filterSection', 'all');
+        els.filterGroup.value = storage.get('filterGroup', 'all');
+      }
+
+      function formatDate(iso) {
+        try { return new Date(iso).toLocaleString(); } catch { return iso; }
+      }
+
+      function renderMessages(messages) {
+        els.messages.innerHTML = '';
+        if (!messages.length) {
+          const item = document.createElement('div');
+          item.className = 'item';
+          item.textContent = 'No notices found for current filters.';
+          els.messages.appendChild(item);
+          return;
+        }
+
+        for (const msg of messages) {
+          const item = document.createElement('div');
+          item.className = 'item';
+
+          const mediaHtml = msg.mediaUrl
+            ? `<div style="margin-top:8px;"><a href="${msg.mediaUrl}" target="_blank">Open ${msg.mediaType || 'media'}</a></div>`
+            : '';
+
+          item.innerHTML = `
+            <div class="meta">
+              <span class="chip">${msg.section || 'general'}</span>
+              <span class="chip">${msg.targetGroup || 'all'}</span>
+              <span class="chip">${msg.senderName || 'Admin'}</span>
+              <span class="chip">${formatDate(msg.createdAt)}</span>
+            </div>
+            <div>${(msg.text || '').replace(/</g, '&lt;')}</div>
+            ${mediaHtml}
+          `;
+
+          els.messages.appendChild(item);
+        }
+      }
+
+      async function loadMessages() {
+        const qs = new URLSearchParams({
+          section: els.filterSection.value || 'all',
+          group: els.filterGroup.value || 'all',
+        });
+        const data = await api(`/api/messages?${qs.toString()}`, {
+          headers: { accept: 'application/json' },
+        });
+        renderMessages(data.messages || []);
+      }
+
+      async function uploadMediaIfAny() {
+        const file = els.mediaFile.files?.[0];
+        if (!file) return { mediaUrl: '', mediaType: '' };
+
+        const form = new FormData();
+        form.append('media', file);
+        const token = els.adminToken.value.trim();
+        const headers = token ? { 'x-admin-token': token } : {};
+
+        const res = await fetch(`${baseUrl()}/api/admin/upload`, {
+          method: 'POST',
+          headers,
+          body: form,
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || `Upload failed (${res.status})`);
+        }
+        return { mediaUrl: data.mediaUrl || '', mediaType: data.mediaType || '' };
+      }
+
+      async function sendNotice() {
+        setStatus('Sending notice...');
+        try {
+          const uploaded = await uploadMediaIfAny();
+          const forcedType = els.mediaType.value.trim();
+
+          const payload = {
+            text: els.text.value.trim(),
+            senderName: els.senderName.value.trim() || 'VU Admin',
+            section: els.section.value || 'general',
+            targetGroup: els.targetGroup.value || 'all',
+            mediaUrl: uploaded.mediaUrl,
+            mediaType: forcedType || uploaded.mediaType,
+          };
+
+          await api('/api/admin/messages', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          els.text.value = '';
+          els.mediaFile.value = '';
+          setStatus('Notice sent successfully ✅');
+          await loadMessages();
+        } catch (error) {
+          setStatus(error.message || String(error), true);
+        }
+      }
+
+      function bindPersistence() {
+        const mapping = [
+          ['baseUrl', els.baseUrl],
+          ['adminToken', els.adminToken],
+          ['senderName', els.senderName],
+          ['section', els.section],
+          ['targetGroup', els.targetGroup],
+          ['filterSection', els.filterSection],
+          ['filterGroup', els.filterGroup],
+        ];
+
+        for (const [key, el] of mapping) {
+          const value = storage.get(key);
+          if (value) el.value = value;
+          el.addEventListener('change', () => storage.set(key, el.value));
+          el.addEventListener('input', () => storage.set(key, el.value));
+        }
+      }
+
+      async function init() {
+        try {
+          bindPersistence();
+          await loadMeta();
+          await loadMessages();
+          setStatus('Connected. Ready to send notices.');
+        } catch (error) {
+          setStatus(error.message || String(error), true);
+        }
+      }
+
+      els.sendBtn.addEventListener('click', sendNotice);
+      els.refreshBtn.addEventListener('click', () => loadMessages().catch((e) => setStatus(e.message, true)));
+      els.filterSection.addEventListener('change', () => loadMessages().catch((e) => setStatus(e.message, true)));
+      els.filterGroup.addEventListener('change', () => loadMessages().catch((e) => setStatus(e.message, true)));
+
+      init();
+    </script>
+  </body>
+</html>
