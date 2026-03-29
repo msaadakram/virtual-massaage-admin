@@ -6,8 +6,11 @@ This backend replaces Firebase chat and keeps **Firebase only for login** in the
 - Admin dashboard UI at `/admin`
 - Notice sections: `paid-project`, `vu-notice`, `learning-notice`, `general`
 - Target groups: `all`, `bscs`, `bsit`, `mcs`, `mba`, `paid-project-team`
+- Messages are stored in MongoDB collection: `messages`
+- Media files are stored in MongoDB GridFS bucket: `media` (`media.files` / `media.chunks`)
 - `GET /api/messages`: app reads messages/media (supports `section` and `group` filters)
 - `GET /api/meta`: sections and groups metadata
+- `GET /api/media/:id`: streams uploaded media from GridFS
 - `POST /api/admin/upload`: admin uploads media (`multipart/form-data`, key `media`)
 - `POST /api/admin/messages`: admin sends text/media messages with section + target group
 - `x-admin-token` header protects admin routes
@@ -19,6 +22,8 @@ Required:
 - `PORT`
 - `BASE_URL`
 - `ADMIN_TOKEN`
+- `MONGODB_URI`
+- `MONGODB_DB_NAME` (set to `vu-chat-app`)
 
 ## Quick start
 1. Install dependencies in `backend/`
@@ -46,16 +51,20 @@ This backend is configured with `vercel.json`.
 4. Add environment variables in Vercel project settings:
 	- `ADMIN_TOKEN`
 	- `BASE_URL` (optional; can be left empty to auto-detect)
+	- `MONGODB_URI`
+	- `MONGODB_DB_NAME` (`vu-chat-app`)
 5. Deploy
 
 After deployment, admin panel will be available at:
 - `https://<your-vercel-domain>/admin`
 
-## Important note for Vercel storage
+## MongoDB storage design
 
-The current message storage uses a local JSON file. On Vercel, file storage is ephemeral (not permanent across redeploys/instances).
+- Database name: `vu-chat-app`
+- Messages collection: `messages`
+- GridFS media bucket: `media`
 
-For production persistence, move message storage to a managed database (e.g. MongoDB Atlas, Supabase, Firebase, or Vercel KV/Postgres).
+This provides persistent storage on local and Vercel deployments.
 
 ## Admin flow
 1. Open `/admin`

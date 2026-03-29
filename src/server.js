@@ -1,11 +1,11 @@
 const path = require('path');
-const fs = require('fs/promises');
 const crypto = require('crypto');
 
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const dotenv = require('dotenv');
+const { MongoClient, GridFSBucket, ObjectId } = require('mongodb');
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
@@ -14,14 +14,9 @@ const PORT = Number(process.env.PORT || 3000);
 const ADMIN_TOKEN = (process.env.ADMIN_TOKEN || '').trim() || 'change-me-admin-token';
 const BASE_URL = (process.env.BASE_URL || '').trim();
 const IS_VERCEL = Boolean(process.env.VERCEL);
+const MONGODB_URI = (process.env.MONGODB_URI || '').trim();
+const MONGODB_DB_NAME = (process.env.MONGODB_DB_NAME || 'vu-chat-app').trim() || 'vu-chat-app';
 
-const DATA_DIR = IS_VERCEL
-  ? '/tmp'
-  : path.resolve(__dirname, '../data');
-const DATA_FILE = IS_VERCEL
-  ? path.join('/tmp', 'messages.json')
-  : path.join(DATA_DIR, 'messages.json');
-const UPLOADS_DIR = path.resolve(__dirname, '../uploads');
 const PUBLIC_DIR = path.resolve(__dirname, '../public');
 
 const NOTICE_SECTIONS = [
@@ -43,8 +38,71 @@ const TARGET_GROUPS = [
 
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
-app.use('/uploads', express.static(UPLOADS_DIR));
 app.use('/admin-assets', express.static(PUBLIC_DIR));
+
+let _mongoClient;
+let _mongoDb;
+let _gridFs;
+let _mongoReadyPromise;
+
+function assertMongoConfig() {
+  if (!MONGODB_URI) {
+    throw new Error('MONGODB_URI is missing. Add it in environment variables.');
+  }
+}
+
+async function ensureMongoReady() {
+  if (_mongoReadyPromise) {
+    return _mongoReadyPromise;
+  }
+
+  _mongoReadyPromise = (async () => {
+    assertMongoConfig();
+
+    if (!_mongoClient) {
+      _mongoClient = new MongoClient(MONGODB_URI, {
+        maxPoolSize: IS_VERCEL ? 5 : 20,
+        minPoolSize: 0,
+        connectTimeoutMS: 10000,
+        serverSelectionTimeoutMS: 10000,
+      });
+      await _mongoClient.connect();
+    }
+
+    _mongoDb = _mongoClient.db(MONGODB_DB_NAME);
+    _gridFs = new GridFSBucket(_mongoDb, { bucketName: 'media' });
+
+    await _mongoDb.collection('messages').createIndex({ createdAt: 1 });
+    await _mongoDb.collection('messages').createIndex({ section: 1, targetGroup: 1, createdAt: 1 });
+  })();
+
+  return _mongoReadyPromise;
+}
+
+async function getMessagesCollection() {
+  await ensureMongoReady();
+  return _mongoDb.collection('messages');
+}
+
+async function saveMediaToGridFs({ buffer, filename, mimeType }) {
+  await ensureMongoReady();
+
+  const uploadStream = _gridFs.openUploadStream(filename, {
+    contentType: mimeType,
+    metadata: {
+      createdAt: new Date(),
+      source: 'admin-upload',
+    },
+  });
+
+  await new Promise((resolve, reject) => {
+    uploadStream.once('error', reject);
+    uploadStream.once('finish', resolve);
+    uploadStream.end(buffer);
+  });
+
+  return uploadStream.id;
+}
 
 function isKnownSection(value) {
   return NOTICE_SECTIONS.some((item) => item.key === value);
@@ -54,23 +112,8 @@ function isKnownGroup(value) {
   return TARGET_GROUPS.some((item) => item.key === value);
 }
 
-const storage = multer.diskStorage({
-  destination: async (_req, _file, cb) => {
-    try {
-      await fs.mkdir(UPLOADS_DIR, { recursive: true });
-      cb(null, UPLOADS_DIR);
-    } catch (error) {
-      cb(error);
-    }
-  },
-  filename: (_req, file, cb) => {
-    const safeExt = path.extname(file.originalname || '').replace(/[^.a-zA-Z0-9]/g, '') || '';
-    cb(null, `${Date.now()}-${crypto.randomUUID()}${safeExt}`);
-  },
-});
-
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
 });
 
@@ -102,31 +145,12 @@ function resolvePublicBaseUrl(req) {
   return `http://localhost:${PORT}`;
 }
 
-async function readMessages() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  try {
-    const raw = await fs.readFile(DATA_FILE, 'utf8');
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      await fs.writeFile(DATA_FILE, '[]\n', 'utf8');
-      return [];
-    }
-    throw error;
-  }
-}
-
-async function writeMessages(messages) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(DATA_FILE, `${JSON.stringify(messages, null, 2)}\n`, 'utf8');
-}
-
 app.get('/health', (_req, res) => {
   res.json({
     ok: true,
     service: 'chat-backend',
     runtime: IS_VERCEL ? 'vercel' : 'node',
+    database: MONGODB_DB_NAME,
     timestamp: new Date().toISOString(),
   });
 });
@@ -144,30 +168,73 @@ app.get('/api/meta', (_req, res) => {
 
 app.get('/api/messages', async (req, res) => {
   try {
-    const messages = await readMessages();
+    const collection = await getMessagesCollection();
     const section = (req.query.section || 'all').toString().trim();
     const group = (req.query.group || 'all').toString().trim();
 
-    const filtered = messages.filter((item) => {
-      const sectionMatches =
-        section === 'all' ||
-        section.length === 0 ||
-        (item.section || 'general') === section;
+    const query = {};
+    if (section !== 'all' && section.length > 0) {
+      query.section = section;
+    }
+    if (group !== 'all' && group.length > 0) {
+      query.$or = [{ targetGroup: 'all' }, { targetGroup: group }];
+    }
 
-      const messageGroup = (item.targetGroup || 'all').toString();
-      const groupMatches =
-        group === 'all' ||
-        group.length === 0 ||
-        messageGroup === 'all' ||
-        messageGroup === group;
+    const docs = await collection
+      .find(query)
+      .sort({ createdAt: 1 })
+      .limit(500)
+      .toArray();
 
-      return sectionMatches && groupMatches;
-    });
+    const messages = docs.map((doc) => ({
+      id: doc._id.toString(),
+      text: doc.text || '',
+      mediaUrl: doc.mediaUrl || '',
+      mediaType: doc.mediaType || 'text',
+      senderRole: doc.senderRole || 'admin',
+      senderName: doc.senderName || 'Admin',
+      section: doc.section || 'general',
+      targetGroup: doc.targetGroup || 'all',
+      createdAt: (doc.createdAt instanceof Date ? doc.createdAt : new Date(doc.createdAt)).toISOString(),
+    }));
 
-    filtered.sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
-    res.json({ messages: filtered });
+    res.json({ messages });
   } catch (error) {
     res.status(500).json({ error: 'Failed to load messages', details: error.message });
+  }
+});
+
+app.get('/api/media/:id', async (req, res) => {
+  try {
+    await ensureMongoReady();
+
+    const fileId = req.params.id;
+    if (!ObjectId.isValid(fileId)) {
+      return res.status(400).json({ error: 'Invalid media id.' });
+    }
+
+    const objectId = new ObjectId(fileId);
+    const files = await _gridFs.find({ _id: objectId }).limit(1).toArray();
+    if (!files.length) {
+      return res.status(404).json({ error: 'Media not found.' });
+    }
+
+    const file = files[0];
+    res.setHeader('Content-Type', file.contentType || 'application/octet-stream');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+
+    const stream = _gridFs.openDownloadStream(objectId);
+    stream.on('error', (error) => {
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Could not stream media', details: error.message });
+      } else {
+        res.end();
+      }
+    });
+
+    return stream.pipe(res);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to load media', details: error.message });
   }
 });
 
@@ -180,17 +247,31 @@ app.post('/api/admin/upload', upload.single('media'), async (req, res) => {
     return res.status(400).json({ error: 'No file uploaded. Use form-data key: media' });
   }
 
-  const mediaUrl = `${resolvePublicBaseUrl(req)}/uploads/${req.file.filename}`;
-  const mediaType = detectMediaType(req.file.mimetype || '');
+  try {
+    const originalName = req.file.originalname || 'media';
+    const safeExt = path.extname(originalName || '').replace(/[^.a-zA-Z0-9]/g, '') || '';
+    const fileName = `${Date.now()}-${crypto.randomUUID()}${safeExt}`;
+    const fileId = await saveMediaToGridFs({
+      buffer: req.file.buffer,
+      filename: fileName,
+      mimeType: req.file.mimetype,
+    });
 
-  return res.json({
-    mediaUrl,
-    mediaType,
-    mimeType: req.file.mimetype,
-    fileName: req.file.filename,
-    originalName: req.file.originalname,
-    size: req.file.size,
-  });
+    const mediaUrl = `${resolvePublicBaseUrl(req)}/api/media/${fileId.toString()}`;
+    const mediaType = detectMediaType(req.file.mimetype || '');
+
+    return res.json({
+      mediaUrl,
+      mediaId: fileId.toString(),
+      mediaType,
+      mimeType: req.file.mimetype,
+      fileName,
+      originalName,
+      size: req.file.size,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Media upload failed', details: error.message });
+  }
 });
 
 app.post('/api/admin/messages', async (req, res) => {
@@ -223,7 +304,6 @@ app.post('/api/admin/messages', async (req, res) => {
   }
 
   const message = {
-    id: crypto.randomUUID(),
     text,
     mediaUrl,
     mediaType: mediaType || (mediaUrl ? 'file' : 'text'),
@@ -231,14 +311,26 @@ app.post('/api/admin/messages', async (req, res) => {
     senderName,
     section,
     targetGroup,
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(),
   };
 
   try {
-    const messages = await readMessages();
-    messages.push(message);
-    await writeMessages(messages);
-    return res.status(201).json({ message });
+    const collection = await getMessagesCollection();
+    const result = await collection.insertOne(message);
+
+    return res.status(201).json({
+      message: {
+        id: result.insertedId.toString(),
+        text: message.text,
+        mediaUrl: message.mediaUrl,
+        mediaType: message.mediaType,
+        senderRole: message.senderRole,
+        senderName: message.senderName,
+        section: message.section,
+        targetGroup: message.targetGroup,
+        createdAt: message.createdAt.toISOString(),
+      },
+    });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to save message', details: error.message });
   }
