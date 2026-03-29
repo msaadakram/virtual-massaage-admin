@@ -4,7 +4,7 @@ This backend replaces Firebase chat and keeps **Firebase only for login** in the
 
 ## Features
 - Admin dashboard UI at `/admin`
-- Notice sections: `paid-project`, `vu-notice`, `learning-notice`, `general`
+- Notice sections: `notice-board`, `website-issues`, `exam-rules`, `date-sheet`, `paid-project`, `jobs`, `vu-notice`, `learning-notice`, `general`
 - Target groups: `all`, `bscs`, `bsit`, `mcs`, `mba`, `paid-project-team`
 - Messages are stored in MongoDB collection: `messages`
 - Media files are stored in MongoDB GridFS bucket: `media` (`media.files` / `media.chunks`)
@@ -83,5 +83,6 @@ Body fields:
 - `mediaUrl` (optional)
 - `mediaType` (`image|video|audio|file` or empty)
 - `section` (`paid-project|vu-notice|learning-notice|general`)
+- `section` (`notice-board|website-issues|exam-rules|date-sheet|paid-project|jobs|vu-notice|learning-notice|general`)
 - `targetGroup` (`all|bscs|bsit|mcs|mba|paid-project-team`)
 - `senderName` (optional)

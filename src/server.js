@@ -21,7 +21,12 @@ const PUBLIC_DIR = path.resolve(__dirname, '../public');
 
 const NOTICE_SECTIONS = [
   { key: 'all', label: 'All Notices' },
+  { key: 'notice-board', label: 'Notice Board' },
+  { key: 'website-issues', label: 'VU Website Issues' },
+  { key: 'exam-rules', label: 'VU Exam Rules' },
+  { key: 'date-sheet', label: 'Date Sheet' },
   { key: 'paid-project', label: 'Paid Project' },
+  { key: 'jobs', label: 'Jobs' },
   { key: 'vu-notice', label: 'VU Notice' },
   { key: 'learning-notice', label: 'Learning Notice' },
   { key: 'general', label: 'General' },
