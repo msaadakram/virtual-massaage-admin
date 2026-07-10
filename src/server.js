@@ -78,7 +78,8 @@ async function ensureMongoReady() {
     _gridFs = new GridFSBucket(_mongoDb, { bucketName: 'media' });
 
     await _mongoDb.collection('messages').createIndex({ createdAt: 1 });
-    await _mongoDb.collection('messages').createIndex({ section: 1, targetGroup: 1, createdAt: 1 });
+    await _mongoDb.collection('messages').createIndex({ createdAt: -1 });
+    await _mongoDb.collection('messages').createIndex({ section: 1, targetGroup: 1, createdAt: -1 });
   })();
 
   return _mongoReadyPromise;
@@ -177,18 +178,43 @@ app.get('/api/messages', async (req, res) => {
     const section = (req.query.section || 'all').toString().trim();
     const group = (req.query.group || 'all').toString().trim();
 
+    let limit = Number.parseInt(req.query.limit, 10);
+    if (!Number.isFinite(limit) || limit <= 0) limit = 20;
+    if (limit > 100) limit = 100;
+
+    const beforeCursorRaw = (req.query.before || req.query.beforeCursor || '').toString().trim();
+    const afterCursorRaw = (req.query.after || req.query.afterCursor || '').toString().trim();
+    const includeTotal = String(req.query.total || '').toLowerCase() === 'true';
+
     const query = {};
     if (section !== 'all' && section.length > 0) {
       query.section = section;
     }
     if (group !== 'all' && group.length > 0) {
-      query.$or = [{ targetGroup: 'all' }, { targetGroup: group }];
+      query.targetGroup = { $in: ['all', group] };
+    }
+
+    let cursorDate = null;
+    let cursorId = null;
+    const activeCursor = beforeCursorRaw || afterCursorRaw;
+    if (activeCursor) {
+      const [datePart, idPart] = activeCursor.split('|');
+      cursorDate = datePart ? new Date(datePart) : null;
+      cursorId = idPart && ObjectId.isValid(idPart) ? new ObjectId(idPart) : null;
+      if (cursorDate && Number.isNaN(cursorDate.getTime())) cursorDate = null;
+    }
+
+    const isAfter = Boolean(afterCursorRaw);
+    if (cursorDate && cursorId) {
+      const compareOp = isAfter ? '$gt' : '$lt';
+      query.createdAt = { [compareOp]: cursorDate };
+      query._id = { [compareOp]: cursorId };
     }
 
     const docs = await collection
       .find(query)
-      .sort({ createdAt: 1 })
-      .limit(500)
+      .sort(isAfter ? { createdAt: 1, _id: 1 } : { createdAt: -1, _id: -1 })
+      .limit(limit)
       .toArray();
 
     const messages = docs.map((doc) => ({
@@ -203,7 +229,30 @@ app.get('/api/messages', async (req, res) => {
       createdAt: (doc.createdAt instanceof Date ? doc.createdAt : new Date(doc.createdAt)).toISOString(),
     }));
 
-    res.json({ messages });
+    if (isAfter) {
+      messages.sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
+    }
+
+    let total = null;
+    if (includeTotal) {
+      const { createdAt: _c, _id: _i, ...countQuery } = query;
+      total = await collection.countDocuments(countQuery);
+    }
+
+    // messages are sorted newest-first (desc) except when paginating forward (after).
+    // For a desc page: messages[0] = newest, messages[last] = oldest.
+    // nextBefore lets the client load the NEXT OLDER page → cursor at the oldest item.
+    // nextAfter lets the client poll for NEW items → cursor at the newest item.
+    const newestMsg = isAfter ? messages[messages.length - 1] : messages[0];
+    const oldestMsg = isAfter ? messages[0] : messages[messages.length - 1];
+    const nextBefore = messages.length === limit && oldestMsg
+      ? `${oldestMsg.createdAt}|${oldestMsg.id}`
+      : null;
+    const nextAfter = newestMsg
+      ? `${newestMsg.createdAt}|${newestMsg.id}`
+      : null;
+
+    res.json({ messages, hasMore: messages.length === limit, nextBefore, nextAfter, total });
   } catch (error) {
     res.status(500).json({ error: 'Failed to load messages', details: error.message });
   }

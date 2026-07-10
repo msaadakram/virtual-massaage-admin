@@ -8,7 +8,9 @@ This backend replaces Firebase chat and keeps **Firebase only for login** in the
 - Target groups: `all`, `bscs`, `bsit`, `mcs`, `mba`, `paid-project-team`
 - Messages are stored in MongoDB collection: `messages`
 - Media files are stored in MongoDB GridFS bucket: `media` (`media.files` / `media.chunks`)
-- `GET /api/messages`: app reads messages/media (supports `section` and `group` filters)
+- `GET /api/messages`: app reads messages/media with cursor pagination
+  - Query params: `section`, `group`, `limit` (default 20, max 100), `before` (cursor for older page), `after` (cursor for newer page), `total=true` (include total count)
+  - Returns `{ messages, hasMore, nextBefore, nextAfter, total }`. Cursor format: `createdAt|_id`.
 - `GET /api/meta`: sections and groups metadata
 - `GET /api/media/:id`: streams uploaded media from GridFS
 - `POST /api/admin/upload`: admin uploads media (`multipart/form-data`, key `media`)

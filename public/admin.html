@@ -118,6 +118,8 @@
         color: #b9d4dc;
       }
       a { color: #8adcf7; }
+      .notice-text { white-space: pre-wrap; word-break: break-word; line-height: 1.45; }
+      .notice-text a { word-break: break-all; }
       .topbar {
         display: flex;
         align-items: center;
@@ -186,17 +188,6 @@
         <section class="card">
           <h3>Recent Notices</h3>
 
-          <div class="row two">
-            <div>
-              <label class="label">Filter Section</label>
-              <select id="filterSection"></select>
-            </div>
-            <div>
-              <label class="label">Filter Group</label>
-              <select id="filterGroup"></select>
-            </div>
-          </div>
-
           <div id="messages" class="list"></div>
         </section>
       </div>
@@ -215,8 +206,6 @@
         sendBtn: document.getElementById('sendBtn'),
         refreshBtn: document.getElementById('refreshBtn'),
         status: document.getElementById('status'),
-        filterSection: document.getElementById('filterSection'),
-        filterGroup: document.getElementById('filterGroup'),
         messages: document.getElementById('messages'),
       };
 
@@ -264,17 +253,41 @@
         const meta = await api('/api/meta', { headers: { accept: 'application/json' } });
         addOptions(els.section, meta.sections);
         addOptions(els.targetGroup, meta.groups);
-        addOptions(els.filterSection, meta.sections);
-        addOptions(els.filterGroup, meta.groups);
 
         els.section.value = storage.get('section', 'general');
         els.targetGroup.value = storage.get('targetGroup', 'all');
-        els.filterSection.value = storage.get('filterSection', 'all');
-        els.filterGroup.value = storage.get('filterGroup', 'all');
       }
 
       function formatDate(iso) {
         try { return new Date(iso).toLocaleString(); } catch { return iso; }
+      }
+
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function linkify(text) {
+        const escaped = escapeHtml(text);
+        return escaped.replace(/(https?:\/\/[^\s<>"')]+)/gi, (url) => {
+          const safe = escapeHtml(url);
+          return `<a href="${safe}" target="_blank" rel="noopener">${safe}</a>`;
+        });
+      }
+
+      function mediaBadge(mediaType) {
+        if (!mediaType || mediaType === 'text') return '';
+        const icon = {
+          image: '🖼️',
+          video: '🎬',
+          audio: '🎵',
+          file: '📎',
+        }[mediaType] || '📎';
+        return `<span class="chip">${icon} ${mediaType.toUpperCase()}</span>`;
       }
 
       function renderMessages(messages) {
@@ -282,7 +295,7 @@
         if (!messages.length) {
           const item = document.createElement('div');
           item.className = 'item';
-          item.textContent = 'No notices found for current filters.';
+          item.textContent = 'No notices yet.';
           els.messages.appendChild(item);
           return;
         }
@@ -292,17 +305,18 @@
           item.className = 'item';
 
           const mediaHtml = msg.mediaUrl
-            ? `<div style="margin-top:8px;"><a href="${msg.mediaUrl}" target="_blank">Open ${msg.mediaType || 'media'}</a></div>`
+            ? `<div style="margin-top:8px;"><a href="${escapeHtml(msg.mediaUrl)}" target="_blank" rel="noopener">Open ${escapeHtml(msg.mediaType) || 'media'}</a></div>`
             : '';
 
           item.innerHTML = `
             <div class="meta">
-              <span class="chip">${msg.section || 'general'}</span>
-              <span class="chip">${msg.targetGroup || 'all'}</span>
-              <span class="chip">${msg.senderName || 'Admin'}</span>
-              <span class="chip">${formatDate(msg.createdAt)}</span>
+              <span class="chip">${escapeHtml(msg.section || 'general')}</span>
+              <span class="chip">${escapeHtml(msg.targetGroup || 'all')}</span>
+              <span class="chip">${escapeHtml(msg.senderName || 'Admin')}</span>
+              ${mediaBadge(msg.mediaType)}
             </div>
-            <div>${(msg.text || '').replace(/</g, '&lt;')}</div>
+            <div class="notice-text">${linkify(msg.text || '')}</div>
+            <div class="muted" style="margin-top:6px;font-size:11.5px;">${escapeHtml(formatDate(msg.createdAt))}</div>
             ${mediaHtml}
           `;
 
@@ -311,11 +325,7 @@
       }
 
       async function loadMessages() {
-        const qs = new URLSearchParams({
-          section: els.filterSection.value || 'all',
-          group: els.filterGroup.value || 'all',
-        });
-        const data = await api(`/api/messages?${qs.toString()}`, {
+        const data = await api('/api/messages', {
           headers: { accept: 'application/json' },
         });
         renderMessages(data.messages || []);
@@ -380,8 +390,6 @@
           ['senderName', els.senderName],
           ['section', els.section],
           ['targetGroup', els.targetGroup],
-          ['filterSection', els.filterSection],
-          ['filterGroup', els.filterGroup],
         ];
 
         for (const [key, el] of mapping) {
@@ -405,8 +413,6 @@
 
       els.sendBtn.addEventListener('click', sendNotice);
       els.refreshBtn.addEventListener('click', () => loadMessages().catch((e) => setStatus(e.message, true)));
-      els.filterSection.addEventListener('change', () => loadMessages().catch((e) => setStatus(e.message, true)));
-      els.filterGroup.addEventListener('change', () => loadMessages().catch((e) => setStatus(e.message, true)));
 
       init();
     </script>
