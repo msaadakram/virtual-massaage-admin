@@ -9,13 +9,19 @@ This backend replaces Firebase chat and keeps **Firebase only for login** in the
 - Messages are stored in MongoDB collection: `messages`
 - Media files are stored in MongoDB GridFS bucket: `media` (`media.files` / `media.chunks`)
 - `GET /api/messages`: app reads messages/media with cursor pagination
-  - Query params: `section`, `group`, `limit` (default 20, max 100), `before` (cursor for older page), `after` (cursor for newer page), `total=true` (include total count)
+  - Query params: `section`, `group`, `limit` (default 20, max 100), `before` (cursor for older page), `after` (cursor for newer page), `total=true` (include total count), `search` (case-insensitive text search), `pinned=true`
   - Returns `{ messages, hasMore, nextBefore, nextAfter, total }`. Cursor format: `createdAt|_id`.
 - `GET /api/meta`: sections and groups metadata
 - `GET /api/media/:id`: streams uploaded media from GridFS
 - `POST /api/admin/upload`: admin uploads media (`multipart/form-data`, key `media`)
-- `POST /api/admin/messages`: admin sends text/media messages with section + target group
-- `x-admin-token` header protects admin routes
+- `POST /api/admin/messages`: admin sends text/media messages with section + target group (+ `pinned`)
+- `GET /api/admin/messages/:id`: fetch a single message (admin only)
+- `PATCH /api/admin/messages/:id`: edit a message (text, mediaUrl, mediaType, section, targetGroup, senderName, pinned). Replacing/removing media also deletes the old GridFS file.
+- `DELETE /api/admin/messages/:id`: delete a message and its GridFS media
+- `DELETE /api/admin/messages`: bulk delete by `{ ids: [...] }`; removes each message's media too
+- `GET /api/admin/media`: list uploaded media files (admin only)
+- `DELETE /api/admin/media/:id`: delete an orphaned media file (admin only)
+- `x-admin-token` header protects all `/api/admin/*` routes
 
 ## Environment
 The backend reads env values from the project root `.env` file.

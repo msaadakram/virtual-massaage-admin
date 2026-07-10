@@ -128,6 +128,68 @@
         flex-wrap: wrap;
       }
       .muted { color: var(--muted); font-size: 13px; }
+      .row-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+      }
+      .row-actions button {
+        width: auto;
+        padding: 6px 12px;
+        font-size: 12.5px;
+        font-weight: 700;
+      }
+      .btn-edit { background: #1d3138; color: var(--text); }
+      .btn-delete { background: #3a1d22; color: var(--danger); border-color: #5a2a30; }
+      .btn-pin { background: #2a2718; color: var(--accent); border-color: #4a3f1a; }
+      .row-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .row-head input[type=checkbox] { width: auto; margin-top: 4px; }
+      .pin-badge {
+        background: linear-gradient(135deg, #f0be5c, #d8a23a);
+        color: #2a1d00;
+        font-weight: 800;
+        font-size: 10px;
+        padding: 3px 7px;
+        border-radius: 999px;
+        margin-left: 4px;
+      }
+      .search-row {
+        display: flex;
+        gap: 8px;
+        margin: 10px 0;
+        flex-wrap: wrap;
+      }
+      .search-row input { flex: 1; min-width: 140px; }
+      .search-row select { width: auto; min-width: 130px; }
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin: 8px 0;
+      }
+      .toolbar button { width: auto; padding: 7px 12px; font-size: 12.5px; }
+      .toolbar .count { color: var(--muted); font-size: 12.5px; margin-left: auto; }
+      .modal-backdrop {
+        position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 50; padding: 16px;
+      }
+      .modal {
+        background: var(--card);
+        border: 1px solid #2d464f;
+        border-radius: 14px;
+        padding: 16px;
+        max-width: 520px; width: 100%;
+        max-height: 88vh; overflow: auto;
+      }
+      .modal h4 { margin: 0 0 10px; }
+      .modal .close { margin-top: 12px; }
     </style>
   </head>
   <body>
@@ -188,8 +250,57 @@
         <section class="card">
           <h3>Recent Notices</h3>
 
+          <div class="search-row">
+            <input id="searchBox" placeholder="Search notices by text..." />
+            <select id="filterSection"></select>
+            <select id="filterGroup"></select>
+            <button id="searchBtn" class="btn-secondary" type="button" style="width:auto;padding:10px 14px;">Search</button>
+          </div>
+
+          <div class="toolbar">
+            <button id="refreshBtn" class="btn-secondary" type="button" style="width:auto;">Refresh</button>
+            <button id="selectAllBtn" class="btn-secondary" type="button" style="width:auto;">Select all</button>
+            <button id="deleteSelectedBtn" class="btn-delete" type="button" style="width:auto;">Delete selected</button>
+            <button id="loadMoreBtn" class="btn-secondary" type="button" style="width:auto;display:none;">Load older</button>
+            <span id="resultCount" class="count"></span>
+          </div>
+
           <div id="messages" class="list"></div>
         </section>
+      </div>
+    </div>
+
+    <div id="editModal" class="modal-backdrop" style="display:none;">
+      <div class="modal">
+        <h4 id="editModalTitle">Edit Notice</h4>
+        <label class="label">Message Text</label>
+        <textarea id="editText"></textarea>
+        <div class="row three" style="margin-top:8px;">
+          <div>
+            <label class="label">Section</label>
+            <select id="editSection"></select>
+          </div>
+          <div>
+            <label class="label">Target Group</label>
+            <select id="editGroup"></select>
+          </div>
+          <div>
+            <label class="label">Sender Name</label>
+            <input id="editSender" />
+          </div>
+        </div>
+        <label class="label" style="margin-top:8px;">Media URL</label>
+        <input id="editMediaUrl" placeholder="Leave empty to remove media" />
+        <label class="label">Replace Media (optional)</label>
+        <input id="editMediaFile" type="file" />
+        <label class="label" style="margin-top:8px;">
+          <input type="checkbox" id="editPinned" style="width:auto;margin-right:6px;vertical-align:middle;" />
+          Pinned (shows at top of feed)
+        </label>
+        <div class="row-actions close">
+          <button id="editSaveBtn">Save changes</button>
+          <button id="editCancelBtn" class="btn-secondary" type="button">Cancel</button>
+        </div>
       </div>
     </div>
 
@@ -207,11 +318,40 @@
         refreshBtn: document.getElementById('refreshBtn'),
         status: document.getElementById('status'),
         messages: document.getElementById('messages'),
+        searchBox: document.getElementById('searchBox'),
+        filterSection: document.getElementById('filterSection'),
+        filterGroup: document.getElementById('filterGroup'),
+        searchBtn: document.getElementById('searchBtn'),
+        selectAllBtn: document.getElementById('selectAllBtn'),
+        deleteSelectedBtn: document.getElementById('deleteSelectedBtn'),
+        loadMoreBtn: document.getElementById('loadMoreBtn'),
+        resultCount: document.getElementById('resultCount'),
+        editModal: document.getElementById('editModal'),
+        editModalTitle: document.getElementById('editModalTitle'),
+        editText: document.getElementById('editText'),
+        editSection: document.getElementById('editSection'),
+        editGroup: document.getElementById('editGroup'),
+        editSender: document.getElementById('editSender'),
+        editMediaUrl: document.getElementById('editMediaUrl'),
+        editMediaFile: document.getElementById('editMediaFile'),
+        editPinned: document.getElementById('editPinned'),
+        editSaveBtn: document.getElementById('editSaveBtn'),
+        editCancelBtn: document.getElementById('editCancelBtn'),
       };
 
       const storage = {
         get(k, fallback = '') { return localStorage.getItem(`vu-admin-${k}`) || fallback; },
         set(k, v) { localStorage.setItem(`vu-admin-${k}`, v || ''); },
+      };
+
+      const state = {
+        notices: [],
+        loadedCount: 0,
+        totalCount: null,
+        nextBefore: null,
+        hasMore: false,
+        selected: new Set(),
+        editingId: null,
       };
 
       const defaultBaseUrl = window.location?.origin || 'https://virtual-massaage-admin.vercel.app';
@@ -253,9 +393,15 @@
         const meta = await api('/api/meta', { headers: { accept: 'application/json' } });
         addOptions(els.section, meta.sections);
         addOptions(els.targetGroup, meta.groups);
+        addOptions(els.filterSection, meta.sections);
+        addOptions(els.filterGroup, meta.groups);
+        addOptions(els.editSection, meta.sections);
+        addOptions(els.editGroup, meta.groups);
 
         els.section.value = storage.get('section', 'general');
         els.targetGroup.value = storage.get('targetGroup', 'all');
+        els.filterSection.value = storage.get('filterSection', 'all');
+        els.filterGroup.value = storage.get('filterGroup', 'all');
       }
 
       function formatDate(iso) {
@@ -290,14 +436,14 @@
         return `<span class="chip">${icon} ${mediaType.toUpperCase()}</span>`;
       }
 
-      function renderMessages(messages) {
+      function renderMessages() {
+        const messages = state.notices;
         els.messages.innerHTML = '';
         if (!messages.length) {
           const item = document.createElement('div');
           item.className = 'item';
-          item.textContent = 'No notices yet.';
+          item.textContent = 'No notices match the current filters.';
           els.messages.appendChild(item);
-          return;
         }
 
         for (const msg of messages) {
@@ -308,41 +454,106 @@
             ? `<div style="margin-top:8px;"><a href="${escapeHtml(msg.mediaUrl)}" target="_blank" rel="noopener">Open ${escapeHtml(msg.mediaType) || 'media'}</a></div>`
             : '';
 
+          const pinBadge = msg.pinned ? '<span class="pin-badge">PINNED</span>' : '';
+          const checked = state.selected.has(msg.id) ? 'checked' : '';
+
           item.innerHTML = `
-            <div class="meta">
-              <span class="chip">${escapeHtml(msg.section || 'general')}</span>
-              <span class="chip">${escapeHtml(msg.targetGroup || 'all')}</span>
-              <span class="chip">${escapeHtml(msg.senderName || 'Admin')}</span>
-              ${mediaBadge(msg.mediaType)}
+            <div class="row-head">
+              <input type="checkbox" class="msg-select" data-id="${escapeHtml(msg.id)}" ${checked} />
+              <div style="flex:1;">
+                <div class="meta">
+                  <span class="chip">${escapeHtml(msg.section || 'general')}</span>
+                  <span class="chip">${escapeHtml(msg.targetGroup || 'all')}</span>
+                  <span class="chip">${escapeHtml(msg.senderName || 'Admin')}</span>
+                  ${mediaBadge(msg.mediaType)}
+                  ${pinBadge}
+                </div>
+                <div class="notice-text">${linkify(msg.text || '')}</div>
+                <div class="muted" style="margin-top:6px;font-size:11.5px;">${escapeHtml(formatDate(msg.createdAt))}</div>
+                ${mediaHtml}
+                <div class="row-actions">
+                  <button class="btn-edit" data-action="edit" data-id="${escapeHtml(msg.id)}">Edit</button>
+                  <button class="btn-pin" data-action="pin" data-id="${escapeHtml(msg.id)}">${msg.pinned ? 'Unpin' : 'Pin'}</button>
+                  <button class="btn-delete" data-action="delete" data-id="${escapeHtml(msg.id)}">Delete</button>
+                </div>
+              </div>
             </div>
-            <div class="notice-text">${linkify(msg.text || '')}</div>
-            <div class="muted" style="margin-top:6px;font-size:11.5px;">${escapeHtml(formatDate(msg.createdAt))}</div>
-            ${mediaHtml}
           `;
 
           els.messages.appendChild(item);
         }
+
+        els.resultCount.textContent = state.totalCount != null
+          ? `Showing ${messages.length} of ${state.totalCount}`
+          : `${messages.length} loaded`;
+        els.loadMoreBtn.style.display = state.hasMore ? '' : 'none';
+      }
+
+      function currentQuery() {
+        const params = new URLSearchParams();
+        const section = els.filterSection.value || 'all';
+        const group = els.filterGroup.value || 'all';
+        const search = els.searchBox.value.trim();
+        if (section !== 'all') params.set('section', section);
+        if (group !== 'all') params.set('group', group);
+        if (search) params.set('search', search);
+        return params;
       }
 
       async function loadMessages() {
-        const data = await api('/api/messages', {
-          headers: { accept: 'application/json' },
-        });
-        renderMessages(data.messages || []);
+        const params = currentQuery();
+        params.set('limit', '20');
+        params.set('total', 'true');
+        try {
+          const data = await api(`/api/messages?${params.toString()}`, {
+            headers: { accept: 'application/json' },
+          });
+          state.notices = data.messages || [];
+          state.nextBefore = data.nextBefore;
+          state.hasMore = Boolean(data.hasMore);
+          state.totalCount = data.total ?? null;
+          state.selected.clear();
+          renderMessages();
+        } catch (error) {
+          setStatus(error.message || String(error), true);
+        }
+      }
+
+      async function loadOlder() {
+        if (!state.hasMore || !state.nextBefore) return;
+        const params = currentQuery();
+        params.set('limit', '20');
+        params.set('before', state.nextBefore);
+        try {
+          const data = await api(`/api/messages?${params.toString()}`, {
+            headers: { accept: 'application/json' },
+          });
+          const older = data.messages || [];
+          const seen = new Set(state.notices.map((m) => m.id));
+          for (const m of older) {
+            if (!seen.has(m.id)) state.notices.push(m);
+          }
+          state.nextBefore = data.nextBefore;
+          state.hasMore = Boolean(data.hasMore);
+          renderMessages();
+        } catch (error) {
+          setStatus(error.message || String(error), true);
+        }
       }
 
       async function uploadMediaIfAny() {
         const file = els.mediaFile.files?.[0];
         if (!file) return { mediaUrl: '', mediaType: '' };
+        return uploadMediaFile(file);
+      }
 
+      async function uploadMediaFile(file) {
         const form = new FormData();
         form.append('media', file);
-        const token = els.adminToken.value.trim();
-        const headers = token ? { 'x-admin-token': token } : {};
 
         const res = await fetch(`${baseUrl()}/api/admin/upload`, {
           method: 'POST',
-          headers,
+          headers: { 'x-admin-token': els.adminToken.value.trim() },
           body: form,
         });
 
@@ -366,6 +577,7 @@
             targetGroup: els.targetGroup.value || 'all',
             mediaUrl: uploaded.mediaUrl,
             mediaType: forcedType || uploaded.mediaType,
+            pinned: false,
           };
 
           await api('/api/admin/messages', {
@@ -383,6 +595,112 @@
         }
       }
 
+      async function deleteMessage(id) {
+        const msg = state.notices.find((m) => m.id === id);
+        const preview = msg ? `"${(msg.text || '').slice(0, 60)}"` : 'this notice';
+        if (!confirm(`Delete ${preview}? This cannot be undone.`)) return;
+        try {
+          await api(`/api/admin/messages/${id}`, { method: 'DELETE' });
+          setStatus('Notice deleted 🗑️');
+          await loadMessages();
+        } catch (error) {
+          setStatus(error.message || String(error), true);
+        }
+      }
+
+      async function togglePin(id) {
+        const msg = state.notices.find((m) => m.id === id);
+        if (!msg) return;
+        try {
+          await api(`/api/admin/messages/${id}`, {
+            method: 'PATCH',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ pinned: !msg.pinned }),
+          });
+          setStatus(msg.pinned ? 'Notice unpinned' : 'Notice pinned 📌');
+          await loadMessages();
+        } catch (error) {
+          setStatus(error.message || String(error), true);
+        }
+      }
+
+      async function deleteSelected() {
+        if (!state.selected.size) {
+          setStatus('Select notices first using the checkboxes.');
+          return;
+        }
+        const ids = Array.from(state.selected);
+        if (!confirm(`Delete ${ids.length} notice(s)? This cannot be undone.`)) return;
+        try {
+          const data = await api('/api/admin/messages', {
+            method: 'DELETE',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ ids }),
+          });
+          setStatus(`Deleted ${data.deleted} notice(s), removed ${data.mediaRemoved} media file(s) 🗑️`);
+          await loadMessages();
+        } catch (error) {
+          setStatus(error.message || String(error), true);
+        }
+      }
+
+      function openEditModal(id) {
+        const msg = state.notices.find((m) => m.id === id);
+        if (!msg) return;
+        state.editingId = id;
+        els.editModalTitle.textContent = 'Edit Notice';
+        els.editText.value = msg.text || '';
+        els.editSection.value = msg.section || 'general';
+        els.editGroup.value = msg.targetGroup || 'all';
+        els.editSender.value = msg.senderName || 'Admin';
+        els.editMediaUrl.value = msg.mediaUrl || '';
+        els.editMediaFile.value = '';
+        els.editPinned.checked = Boolean(msg.pinned);
+        els.editModal.style.display = 'flex';
+      }
+
+      function closeEditModal() {
+        state.editingId = null;
+        els.editModal.style.display = 'none';
+      }
+
+      async function saveEdit() {
+        if (!state.editingId) return;
+        const id = state.editingId;
+        const payload = {
+          text: els.editText.value.trim(),
+          section: els.editSection.value || 'general',
+          targetGroup: els.editGroup.value || 'all',
+          senderName: els.editSender.value.trim() || 'Admin',
+          mediaUrl: els.editMediaUrl.value.trim(),
+          pinned: els.editPinned.checked,
+        };
+
+        const file = els.editMediaFile.files?.[0];
+        if (file) {
+          try {
+            const uploaded = await uploadMediaFile(file);
+            payload.mediaUrl = uploaded.mediaUrl;
+          } catch (error) {
+            setStatus(error.message || String(error), true);
+            return;
+          }
+        }
+
+        try {
+          await api(`/api/admin/messages/${id}`, {
+            method: 'PATCH',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          setStatus('Notice updated ✅');
+          closeEditModal();
+          await loadMessages();
+        } catch (error) {
+          setStatus(error.message || String(error), true);
+        }
+      }
+
       function bindPersistence() {
         const mapping = [
           ['baseUrl', els.baseUrl],
@@ -390,6 +708,8 @@
           ['senderName', els.senderName],
           ['section', els.section],
           ['targetGroup', els.targetGroup],
+          ['filterSection', els.filterSection],
+          ['filterGroup', els.filterGroup],
         ];
 
         for (const [key, el] of mapping) {
@@ -413,6 +733,45 @@
 
       els.sendBtn.addEventListener('click', sendNotice);
       els.refreshBtn.addEventListener('click', () => loadMessages().catch((e) => setStatus(e.message, true)));
+      els.searchBtn.addEventListener('click', () => loadMessages().catch((e) => setStatus(e.message, true)));
+      els.searchBox.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') loadMessages().catch((err) => setStatus(err.message, true));
+      });
+      els.filterSection.addEventListener('change', () => loadMessages().catch((e) => setStatus(e.message, true)));
+      els.filterGroup.addEventListener('change', () => loadMessages().catch((e) => setStatus(e.message, true)));
+      els.loadMoreBtn.addEventListener('click', loadOlder);
+      els.selectAllBtn.addEventListener('click', () => {
+        if (state.selected.size === state.notices.length) {
+          state.selected.clear();
+        } else {
+          state.notices.forEach((m) => state.selected.add(m.id));
+        }
+        renderMessages();
+      });
+      els.deleteSelectedBtn.addEventListener('click', deleteSelected);
+      els.editSaveBtn.addEventListener('click', saveEdit);
+      els.editCancelBtn.addEventListener('click', closeEditModal);
+      els.editModal.addEventListener('click', (e) => {
+        if (e.target === els.editModal) closeEditModal();
+      });
+
+      els.messages.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        const action = btn.dataset.action;
+        if (action === 'edit') openEditModal(id);
+        else if (action === 'delete') deleteMessage(id);
+        else if (action === 'pin') togglePin(id);
+      });
+
+      els.messages.addEventListener('change', (e) => {
+        const box = e.target.closest('input.msg-select');
+        if (!box) return;
+        const id = box.dataset.id;
+        if (box.checked) state.selected.add(id);
+        else state.selected.delete(id);
+      });
 
       init();
     </script>
