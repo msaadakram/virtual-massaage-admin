@@ -352,6 +352,10 @@ function resolvePublicBaseUrl(req) {
     return `${proto}://${host}`;
   }
 
+  // No host header — never synthesize a localhost URL on a deployment.
+  if (IS_VERCEL) {
+    throw new Error('Unable to resolve public base URL: set BASE_URL in the environment.');
+  }
   return `http://localhost:${PORT}`;
 }
 
