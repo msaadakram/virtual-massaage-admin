@@ -375,6 +375,12 @@ app.get('/admin', (_req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'admin.html'));
 });
 
+app.get('/admin/resources', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.sendFile(path.join(PUBLIC_DIR, 'resources.html'));
+});
+
 app.get('/api/meta', (_req, res) => {
   res.json({
     sections: NOTICE_SECTIONS,
