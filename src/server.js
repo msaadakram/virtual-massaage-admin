@@ -21,6 +21,16 @@ const JWT_SECRET = (process.env.JWT_SECRET || '').trim();
 const ADMIN_USERNAME = (process.env.ADMIN_USERNAME || '').trim();
 const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || '').trim();
 const FIREBASE_PROJECT_ID = (process.env.FIREBASE_PROJECT_ID || 'vu-student-app-9ea23').trim() || 'vu-student-app-9ea23';
+const DOAI_API_KEY = (process.env.DOAI_API_KEY || '').trim();
+const DOAI_BASE_URL = (process.env.DOAI_BASE_URL || 'https://inference.do-ai.run/v1').trim();
+const DOAI_MODEL = (process.env.DOAI_MODEL || 'deepseek-4-flash').trim();
+const DOAI_MAX_TOKENS = Number(process.env.DOAI_MAX_TOKENS || 6000) || 6000;
+
+const DOAI_SYSTEM_PROMPT =
+  'You are the VU Officials VULMS AI assistant, a friendly and concise study helper for Virtual University of Pakistan students. ' +
+  'Answer study questions, explain concepts, help with assignments, past papers, notes, and course material. ' +
+  'Be accurate, clear, and encouraging. Keep answers focused and use short paragraphs or bullet points when helpful. ' +
+  'If you do not know something, say so. Do not invent facts or fabricate VU policies/links.';
 
 const PUBLIC_DIR = path.resolve(__dirname, '../public');
 
@@ -387,6 +397,139 @@ app.get('/api/meta', (_req, res) => {
     groups: TARGET_GROUPS,
     resourceCategories: RESOURCE_CATEGORIES,
   });
+});
+
+app.post('/api/ai/chat', async (req, res) => {
+  try {
+    const idToken = (req.headers['x-user-token'] || '').toString().trim();
+    let user;
+    try {
+      user = await verifyFirebaseUser(idToken);
+    } catch (error) {
+      console.error('[ai] user token verification failed:', error.message);
+      return res.status(401).json({ error: 'Invalid or missing user token.', details: error.message });
+    }
+
+    if (!DOAI_API_KEY) {
+      return res.status(503).json({ error: 'AI assistant is not configured.' });
+    }
+
+    let incomingMessages = Array.isArray(req.body?.messages) ? req.body.messages : null;
+    if (!incomingMessages || incomingMessages.length === 0) {
+      return res.status(400).json({ error: 'messages is required.' });
+    }
+
+    const cleaned = [];
+    for (const m of incomingMessages) {
+      const role = (m?.role || '').toString().toLowerCase();
+      const content = (m?.content ?? '').toString();
+      if ((role === 'user' || role === 'assistant') && content.trim()) {
+        cleaned.push({ role, content });
+      }
+    }
+    const lastUserIndex = cleaned.map((m) => m.role).lastIndexOf('user');
+    const trimmed = lastUserIndex > 0 ? cleaned.slice(lastUserIndex) : cleaned;
+    const messages = [{ role: 'system', content: DOAI_SYSTEM_PROMPT }, ...trimmed];
+
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders?.();
+
+    const writeSse = (obj) => {
+      res.write(`data: ${JSON.stringify(obj)}\n\n`);
+    };
+
+    writeSse({ hello: true });
+
+    const controller = new AbortController();
+    let clientClosed = false;
+    const onClose = () => {
+      clientClosed = true;
+      try { controller.abort(); } catch (_) {}
+    };
+    req.on('close', onClose);
+
+    let upstream;
+    try {
+      upstream = await fetch(`${DOAI_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${DOAI_API_KEY}`,
+          'Content-Type': 'application/json',
+          Accept: 'text/event-stream',
+        },
+        body: JSON.stringify({
+          model: DOAI_MODEL,
+          messages,
+          stream: true,
+          max_tokens: DOAI_MAX_TOKENS,
+        }),
+      });
+    } catch (error) {
+      req.off('close', onClose);
+      writeSse({ error: `Upstream request failed: ${error.message}` });
+      writeSse({ done: true });
+      res.end();
+      return;
+    }
+
+    if (!upstream.ok || !upstream.body) {
+      req.off('close', onClose);
+      const errText = await upstream.text().catch(() => '');
+      writeSse({ error: `Upstream error ${upstream.status}: ${errText.slice(0, 500)}` });
+      writeSse({ done: true });
+      res.end();
+      return;
+    }
+
+    let buffer = '';
+    try {
+      for await (const chunk of upstream.body) {
+        if (clientClosed) break;
+        buffer += Buffer.from(chunk).toString('utf8');
+        let nl;
+        while ((nl = buffer.indexOf('\n')) >= 0) {
+          const rawLine = buffer.slice(0, nl).trim();
+          buffer = buffer.slice(nl + 1);
+          if (!rawLine) continue;
+          if (!rawLine.startsWith('data:')) continue;
+          const data = rawLine.slice(5).trim();
+          if (data === '[DONE]') {
+            writeSse({ done: true });
+            res.end();
+            req.off('close', onClose);
+            return;
+          }
+          try {
+            const parsed = JSON.parse(data);
+            const delta = parsed?.choices?.[0]?.delta?.content;
+            if (typeof delta === 'string' && delta.length > 0) {
+              writeSse({ delta });
+            }
+          } catch (_) {
+            // ignore keepalive / non-JSON lines
+          }
+        }
+      }
+    } catch (error) {
+      if (!clientClosed) {
+        writeSse({ error: `Stream read failed: ${error.message}` });
+      }
+    }
+
+    writeSse({ done: true });
+    res.end();
+    req.off('close', onClose);
+  } catch (error) {
+    console.error('[ai] handler error:', error);
+    if (!res.headersSent) {
+      return res.status(500).json({ error: 'AI assistant failed.', details: error.message });
+    }
+    try { res.end(); } catch (_) {}
+  }
 });
 
 app.get('/api/admin/whoami', async (req, res) => {
