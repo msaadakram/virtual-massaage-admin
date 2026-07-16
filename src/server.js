@@ -370,6 +370,8 @@ app.get('/health', (_req, res) => {
 });
 
 app.get('/admin', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
   res.sendFile(path.join(PUBLIC_DIR, 'admin.html'));
 });
 
