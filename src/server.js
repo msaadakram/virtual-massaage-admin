@@ -973,6 +973,7 @@ app.post('/api/resources', upload.single('file'), async (req, res) => {
     const idToken = (req.headers['x-user-token'] || '').toString().trim();
     user = await verifyFirebaseUser(idToken);
   } catch (error) {
+    console.error('[resources] user token verification failed:', error.message);
     return res.status(401).json({ error: 'Invalid or missing user token.', details: error.message });
   }
 
