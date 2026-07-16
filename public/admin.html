@@ -3,215 +3,379 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>VU Notice Admin</title>
+    <title>VU Admin Dashboard</title>
     <style>
       :root {
-        --bg: #0c1215;
+        --bg: #0a1013;
+        --bg-2: #0e171b;
         --card: #142126;
         --card-soft: #1a2b31;
-        --accent: #39b9a9;
-        --text: #e4eef2;
-        --muted: #9eb0b8;
+        --card-hi: #1f333a;
+        --hairline: #2d464f;
+        --hairline-soft: #27414a;
+        --accent: #3dd9c4;
+        --accent-2: #1fb9a4;
+        --accent-ink: #06231f;
+        --text: #e8f3f6;
+        --muted: #9fb3bb;
         --danger: #ff6b6b;
+        --danger-soft: #3a1d22;
+        --warn: #f5c76b;
+        --radius: 14px;
+        --radius-lg: 20px;
+        --radius-pill: 999px;
+        --shadow-1: 0 10px 30px rgba(0,0,0,0.35);
+        --shadow-glow: 0 0 0 1px rgba(61,217,196,0.18), 0 18px 40px rgba(0,0,0,0.40);
+        --ease: cubic-bezier(0.22, 1, 0.36, 1);
       }
       * { box-sizing: border-box; }
+      html, body { height: 100%; }
       body {
         margin: 0;
-        font-family: Inter, Arial, sans-serif;
-        background: radial-gradient(circle at top, #13252c, var(--bg));
+        font-family: Inter, "Segoe UI", Arial, sans-serif;
+        background:
+          radial-gradient(1200px 600px at 15% -8%, rgba(61,217,196,0.10), transparent 60%),
+          radial-gradient(900px 500px at 95% 0%, rgba(96,165,250,0.08), transparent 55%),
+          linear-gradient(180deg, var(--bg-2), var(--bg) 60%);
         color: var(--text);
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
       }
       .wrap {
-        max-width: 1020px;
+        max-width: 1200px;
         margin: 0 auto;
-        padding: 20px;
+        padding: 24px 20px 56px;
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-bottom: 22px;
+        padding: 14px 16px;
+        background: linear-gradient(135deg, rgba(20,33,38,0.85), rgba(26,43,49,0.65));
+        border: 1px solid var(--hairline);
+        border-radius: var(--radius-lg);
+        backdrop-filter: blur(8px);
+        box-shadow: var(--shadow-1);
       }
       .title {
-        font-size: 28px;
+        display: flex; align-items: center; gap: 12px;
+        font-size: 24px;
         font-weight: 800;
-        margin: 0 0 14px;
+        letter-spacing: 0.2px;
+        margin: 0;
+        background: linear-gradient(135deg, #7df0df, var(--accent) 55%, #49c8ff);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .title-mark {
+        width: 38px; height: 38px; border-radius: 12px;
+        background: linear-gradient(135deg, var(--accent-2), var(--accent));
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 6px 18px rgba(61,217,196,0.35);
+        font-size: 20px;
+      }
+      .topbar .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .admin-pill {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 7px 14px;
+        border-radius: var(--radius-pill);
+        background: rgba(61,217,196,0.10);
+        border: 1px solid rgba(61,217,196,0.28);
+        color: var(--accent);
+        font-weight: 700; font-size: 13px;
+      }
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 22px;
+        flex-wrap: wrap;
+        padding: 6px;
+        background: rgba(14,23,27,0.7);
+        border: 1px solid var(--hairline-soft);
+        border-radius: var(--radius-pill);
+        width: fit-content;
+      }
+      .tab {
+        padding: 10px 20px;
+        border-radius: var(--radius-pill);
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 14px;
+        transition: color 0.18s var(--ease), background 0.18s var(--ease), box-shadow 0.18s var(--ease);
+      }
+      .tab:hover { color: var(--text); }
+      .tab.active {
+        background: linear-gradient(135deg, var(--accent-2), var(--accent));
+        color: var(--accent-ink);
+        border-color: transparent;
+        box-shadow: 0 8px 22px rgba(61,217,196,0.30);
       }
       .grid {
         display: grid;
         grid-template-columns: 1fr;
-        gap: 14px;
+        gap: 18px;
       }
-      @media (min-width: 920px) {
-        .grid { grid-template-columns: 1.2fr 1fr; }
-      }
+      @media (min-width: 920px) { .grid.two { grid-template-columns: 1.08fr 1fr; } }
       .card {
-        background: linear-gradient(135deg, var(--card), var(--card-soft));
-        border: 1px solid #2d464f;
-        border-radius: 16px;
-        padding: 14px;
+        background: linear-gradient(160deg, var(--card), var(--card-soft));
+        border: 1px solid var(--hairline);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+        box-shadow: var(--shadow-1);
+        transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), transform 0.2s var(--ease);
+      }
+      .card:hover { border-color: #3a6770; }
+      .card h3 {
+        margin: 0 0 14px;
+        font-size: 16px;
+        font-weight: 800;
+        letter-spacing: 0.2px;
+        display: flex; align-items: center; gap: 8px;
+      }
+      .card h3::before {
+        content: ""; width: 4px; height: 16px; border-radius: 4px;
+        background: linear-gradient(180deg, var(--accent), var(--accent-2));
       }
       .label {
         display: block;
-        font-size: 12px;
+        font-size: 11.5px;
         color: var(--muted);
-        margin: 8px 0 6px;
+        margin: 12px 0 6px;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
       }
       input, select, textarea, button {
         width: 100%;
-        border-radius: 10px;
-        border: 1px solid #34515c;
-        background: #102026;
+        border-radius: 12px;
+        border: 1px solid var(--hairline);
+        background: #0b171c;
         color: var(--text);
-        padding: 10px 12px;
+        padding: 11px 13px;
         font: inherit;
+        transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease), background 0.15s var(--ease);
       }
-      textarea { min-height: 110px; resize: vertical; }
-      .row {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 10px;
+      input::placeholder, textarea::placeholder { color: #6c838b; }
+      input:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(61,217,196,0.18);
+        background: #0d1c22;
       }
+      textarea { min-height: 104px; resize: vertical; line-height: 1.5; }
+      select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 18px) 18px, calc(100% - 13px) 18px; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 34px; }
+      .row { display: grid; grid-template-columns: 1fr; gap: 10px; }
       @media (min-width: 680px) {
         .row.three { grid-template-columns: repeat(3, 1fr); }
         .row.two { grid-template-columns: repeat(2, 1fr); }
       }
       button {
         cursor: pointer;
-        background: linear-gradient(135deg, #2ca997, var(--accent));
-        color: #072623;
+        background: linear-gradient(135deg, var(--accent-2), var(--accent));
+        color: var(--accent-ink);
         font-weight: 800;
+        border: none;
+        box-shadow: 0 8px 20px rgba(31,185,164,0.28);
+        transition: filter 0.15s var(--ease), transform 0.08s var(--ease), box-shadow 0.15s var(--ease);
       }
-      .btn-secondary {
-        background: #1d3138;
-        color: var(--text);
-      }
+      button:hover { filter: brightness(1.08); box-shadow: 0 10px 26px rgba(31,185,164,0.38); }
+      button:active { transform: translateY(1px) scale(0.99); }
+      button:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; filter: none; }
+      .btn-secondary { background: #16292f; color: var(--text); border: 1px solid var(--hairline); box-shadow: none; }
+      .btn-secondary:hover { background: #1b323a; border-color: #3a6770; }
+      .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--hairline); box-shadow: none; }
+      .btn-ghost:hover { color: var(--text); border-color: #3a6770; }
+      .btn-danger { background: var(--danger-soft); color: var(--danger); border: 1px solid #5a2a30; box-shadow: none; }
+      .btn-danger:hover { background: #461f25; }
       .status {
-        margin-top: 10px;
-        padding: 10px;
-        border-radius: 10px;
-        background: #1a2f36;
+        margin-top: 14px;
+        padding: 11px 13px;
+        border-radius: 12px;
+        background: #0f2329;
         color: var(--muted);
         font-size: 13px;
         white-space: pre-wrap;
+        border: 1px solid var(--hairline-soft);
       }
+      .status.ok { color: #8af2dd; border-color: rgba(61,217,196,0.4); background: rgba(31,185,164,0.08); }
       .danger { color: var(--danger); }
       .list {
         display: flex;
         flex-direction: column;
-        gap: 10px;
-        margin-top: 10px;
-        max-height: 580px;
+        gap: 12px;
+        margin-top: 14px;
+        max-height: 640px;
         overflow: auto;
+        padding-right: 4px;
       }
+      .list::-webkit-scrollbar { width: 10px; }
+      .list::-webkit-scrollbar-thumb { background: #1d373f; border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+      .list::-webkit-scrollbar-track { background: transparent; }
       .item {
-        background: #0f1c21;
-        border: 1px solid #27414a;
-        border-radius: 12px;
-        padding: 10px;
+        background: linear-gradient(135deg, #112025, #0e1c21);
+        border: 1px solid var(--hairline-soft);
+        border-radius: var(--radius);
+        padding: 14px;
+        transition: border-color 0.18s var(--ease), transform 0.18s var(--ease), box-shadow 0.18s var(--ease);
       }
-      .meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-bottom: 6px;
+      .item:hover {
+        border-color: #3a6770;
+        transform: translateY(-2px);
+        box-shadow: 0 12px 26px rgba(0,0,0,0.30);
       }
+      .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
       .chip {
         font-size: 11px;
-        border-radius: 999px;
-        padding: 4px 8px;
+        border-radius: var(--radius-pill);
+        padding: 4px 10px;
         background: #16323a;
         color: #b9d4dc;
-      }
-      a { color: #8adcf7; }
-      .notice-text { white-space: pre-wrap; word-break: break-word; line-height: 1.45; }
-      .notice-text a { word-break: break-all; }
-      .topbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      .muted { color: var(--muted); font-size: 13px; }
-      .row-actions {
-        display: flex;
-        gap: 8px;
-        margin-top: 10px;
-        flex-wrap: wrap;
-      }
-      .row-actions button {
-        width: auto;
-        padding: 6px 12px;
-        font-size: 12.5px;
         font-weight: 700;
+        letter-spacing: 0.3px;
+        border: 1px solid rgba(255,255,255,0.04);
       }
-      .btn-edit { background: #1d3138; color: var(--text); }
-      .btn-delete { background: #3a1d22; color: var(--danger); border-color: #5a2a30; }
-      .btn-pin { background: #2a2718; color: var(--accent); border-color: #4a3f1a; }
-      .row-head {
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
-      }
-      .row-head input[type=checkbox] { width: auto; margin-top: 4px; }
+      .chip.accent { background: rgba(61,217,196,0.16); color: var(--accent); border-color: rgba(61,217,196,0.25); }
+      .chip.user { background: rgba(96,165,250,0.16); color: #93c5fd; border-color: rgba(96,165,250,0.25); }
+      .chip.admin { background: rgba(245,199,107,0.16); color: var(--warn); border-color: rgba(245,199,107,0.25); }
+      a { color: #8adcf7; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .notice-text { white-space: pre-wrap; word-break: break-word; line-height: 1.55; font-size: 14px; color: var(--text); }
+      .notice-text a { word-break: break-all; }
+      .muted { color: var(--muted); font-size: 13px; }
+      .row-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+      .row-actions button { width: auto; padding: 7px 14px; font-size: 12.5px; font-weight: 700; }
+      .row-head { display: flex; align-items: flex-start; gap: 12px; }
+      .row-head input[type=checkbox] { width: auto; margin-top: 4px; accent-color: var(--accent); }
       .pin-badge {
-        background: linear-gradient(135deg, #f0be5c, #d8a23a);
-        color: #2a1d00;
-        font-weight: 800;
-        font-size: 10px;
-        padding: 3px 7px;
-        border-radius: 999px;
-        margin-left: 4px;
+        background: linear-gradient(135deg, var(--warn), #d8a23a);
+        color: #2a1d00; font-weight: 800; font-size: 10px;
+        padding: 3px 8px; border-radius: var(--radius-pill); margin-left: 6px;
+        letter-spacing: 0.4px;
       }
-      .search-row {
-        display: flex;
-        gap: 8px;
-        margin: 10px 0;
-        flex-wrap: wrap;
-      }
+      .search-row { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
       .search-row input { flex: 1; min-width: 140px; }
       .search-row select { width: auto; min-width: 130px; }
-      .toolbar {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        flex-wrap: wrap;
-        margin: 8px 0;
-      }
-      .toolbar button { width: auto; padding: 7px 12px; font-size: 12.5px; }
-      .toolbar .count { color: var(--muted); font-size: 12.5px; margin-left: auto; }
+      .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 10px 0; }
+      .toolbar button { width: auto; padding: 8px 14px; font-size: 12.5px; }
+      .toolbar .count { color: var(--muted); font-size: 12.5px; margin-left: auto; font-weight: 600; }
       .modal-backdrop {
-        position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+        position: fixed; inset: 0;
+        background: rgba(4,10,12,0.65);
+        backdrop-filter: blur(6px);
         display: flex; align-items: center; justify-content: center;
         z-index: 50; padding: 16px;
+        animation: fade 0.18s var(--ease);
       }
+      @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
       .modal {
-        background: var(--card);
-        border: 1px solid #2d464f;
-        border-radius: 14px;
-        padding: 16px;
-        max-width: 520px; width: 100%;
+        background: linear-gradient(160deg, var(--card), var(--card-soft));
+        border: 1px solid var(--hairline);
+        border-radius: var(--radius-lg);
+        padding: 22px;
+        max-width: 560px; width: 100%;
         max-height: 88vh; overflow: auto;
+        box-shadow: var(--shadow-glow);
+        animation: pop 0.22s var(--ease);
       }
-      .modal h4 { margin: 0 0 10px; }
-      .modal .close { margin-top: 12px; }
+      @keyframes pop { from { transform: translateY(8px) scale(0.98); opacity: 0; } to { transform: none; opacity: 1; } }
+      .modal h4 { margin: 0 0 14px; font-size: 17px; font-weight: 800; }
+      .modal .close { margin-top: 16px; }
+      /* Login screen */
+      .login-wrap {
+        min-height: 100vh;
+        display: flex; align-items: center; justify-content: center;
+        padding: 20px;
+        background:
+          radial-gradient(800px 500px at 50% -10%, rgba(61,217,196,0.12), transparent 60%),
+          radial-gradient(600px 400px at 50% 110%, rgba(96,165,250,0.08), transparent 60%);
+      }
+      .login-card {
+        background: linear-gradient(160deg, var(--card), var(--card-soft));
+        border: 1px solid var(--hairline);
+        border-radius: 24px;
+        padding: 36px 32px;
+        width: 100%; max-width: 400px;
+        box-shadow: 0 30px 70px rgba(0,0,0,0.5), 0 0 0 1px rgba(61,217,196,0.10);
+      }
+      .login-card .logo {
+        width: 64px; height: 64px; border-radius: 20px;
+        background: linear-gradient(135deg, var(--accent-2), var(--accent));
+        display: flex; align-items: center; justify-content: center;
+        font-size: 32px; margin: 0 auto 18px;
+        box-shadow: 0 14px 30px rgba(61,217,196,0.40);
+      }
+      .login-card h2 {
+        text-align: center; margin: 0 0 6px; font-size: 24px; font-weight: 800;
+        letter-spacing: 0.2px;
+      }
+      .login-card .sub {
+        text-align: center; color: var(--muted); margin-bottom: 24px; font-size: 13.5px;
+      }
+      .login-error { color: var(--danger); font-size: 13px; margin-top: 12px; min-height: 18px; text-align: center; }
+      .hidden { display: none !important; }
+      .badge-dot {
+        display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+        background: var(--accent); margin-right: 2px; vertical-align: middle;
+        box-shadow: 0 0 0 0 rgba(61,217,196,0.7);
+        animation: pulse 2.4s var(--ease) infinite;
+      }
+      @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(61,217,196,0.6); }
+        70% { box-shadow: 0 0 0 8px rgba(61,217,196,0); }
+        100% { box-shadow: 0 0 0 0 rgba(61,217,196,0); }
+      }
+      code { background: #0c1b21; padding: 2px 6px; border-radius: 6px; font-size: 11.5px; color: #b9d4dc; border: 1px solid var(--hairline-soft); }
     </style>
   </head>
   <body>
-    <div class="wrap">
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="login-wrap">
+      <div class="login-card">
+        <div class="logo">📚</div>
+        <h2>VU Admin</h2>
+        <div class="sub">Sign in to manage notices and resources</div>
+        <label class="label">Username</label>
+        <input id="loginUsername" placeholder="admin" autocomplete="username" />
+        <label class="label">Password</label>
+        <input id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password" />
+        <button id="loginBtn" style="margin-top:16px;">Sign in</button>
+        <div id="loginError" class="login-error"></div>
+        <div class="muted" style="text-align:center;margin-top:16px;font-size:11.5px;">
+          Default credentials are set via <code>ADMIN_USERNAME</code> / <code>ADMIN_PASSWORD</code> env vars.
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard" class="wrap hidden">
       <div class="topbar">
-        <h1 class="title">VU Notice Admin Dashboard</h1>
-        <div class="muted">Route: <code>/admin</code></div>
+        <h1 class="title"><span class="title-mark">📚</span><span>VU Admin Dashboard</span></h1>
+        <div class="actions">
+          <span class="admin-pill"><span class="badge-dot"></span><span id="adminName">admin</span></span>
+          <button id="changePassBtn" class="btn-ghost" type="button" style="width:auto;padding:8px 14px;">Change password</button>
+          <button id="logoutBtn" class="btn-secondary" type="button" style="width:auto;padding:8px 14px;">Logout</button>
+        </div>
       </div>
 
-      <div class="grid">
+      <div class="tabs">
+        <div class="tab active" data-tab="notices">Notices</div>
+        <div class="tab" data-tab="resources">Resources</div>
+      </div>
+
+      <!-- NOTICES TAB -->
+      <div id="tabNotices" class="grid two">
         <section class="card">
           <h3>Send Notice</h3>
-
-          <label class="label">Backend URL</label>
-          <input id="baseUrl" value="" placeholder="Auto: current domain" />
-
-          <label class="label">Admin Token</label>
-          <input id="adminToken" type="password" placeholder="x-admin-token" />
-
           <label class="label">Sender Name</label>
           <input id="senderName" value="VU Admin" />
-
           <div class="row three">
             <div>
               <label class="label">Notice Section</label>
@@ -232,62 +396,87 @@
               </select>
             </div>
           </div>
-
           <label class="label">Message Text</label>
           <textarea id="text" placeholder="Write your notice message..."></textarea>
-
           <label class="label">Upload Media (optional)</label>
           <input id="mediaFile" type="file" />
-
-          <div class="row two" style="margin-top: 12px;">
+          <div class="row two" style="margin-top:12px;">
             <button id="sendBtn">Send Notice</button>
-            <button id="refreshBtn" class="btn-secondary" type="button">Refresh Messages</button>
+            <button id="pinNewBtn" class="btn-secondary" type="button">Pin on send: off</button>
           </div>
-
           <div id="status" class="status">Ready</div>
         </section>
 
         <section class="card">
           <h3>Recent Notices</h3>
-
           <div class="search-row">
             <input id="searchBox" placeholder="Search notices by text..." />
             <select id="filterSection"></select>
             <select id="filterGroup"></select>
             <button id="searchBtn" class="btn-secondary" type="button" style="width:auto;padding:10px 14px;">Search</button>
           </div>
-
           <div class="toolbar">
-            <button id="refreshBtn" class="btn-secondary" type="button" style="width:auto;">Refresh</button>
+            <button id="refreshNoticesBtn" class="btn-secondary" type="button" style="width:auto;">Refresh</button>
             <button id="selectAllBtn" class="btn-secondary" type="button" style="width:auto;">Select all</button>
-            <button id="deleteSelectedBtn" class="btn-delete" type="button" style="width:auto;">Delete selected</button>
-            <button id="loadMoreBtn" class="btn-secondary" type="button" style="width:auto;display:none;">Load older</button>
+            <button id="deleteSelectedBtn" class="btn-danger" type="button" style="width:auto;">Delete selected</button>
+            <button id="loadMoreNoticesBtn" class="btn-secondary" type="button" style="width:auto;display:none;">Load older</button>
             <span id="resultCount" class="count"></span>
           </div>
-
           <div id="messages" class="list"></div>
+        </section>
+      </div>
+
+      <!-- RESOURCES TAB -->
+      <div id="tabResources" class="grid two hidden">
+        <section class="card">
+          <h3>Upload Resource</h3>
+          <label class="label">Title</label>
+          <input id="resTitle" placeholder="e.g. CS101 Midterm Past Paper" />
+          <div class="row two">
+            <div>
+              <label class="label">Category</label>
+              <select id="resCategory"></select>
+            </div>
+            <div>
+              <label class="label">Uploader Name</label>
+              <input id="resUploader" value="Admin" />
+            </div>
+          </div>
+          <label class="label">Description (optional)</label>
+          <textarea id="resDescription" placeholder="Short description..."></textarea>
+          <label class="label">File</label>
+          <input id="resFile" type="file" />
+          <button id="resUploadBtn" style="margin-top:12px;">Upload Resource</button>
+          <div id="resStatus" class="status">Ready</div>
+        </section>
+
+        <section class="card">
+          <h3>All Resources</h3>
+          <div class="search-row">
+            <input id="resSearch" placeholder="Search resources..." />
+            <select id="resFilterCategory"></select>
+            <button id="resSearchBtn" class="btn-secondary" type="button" style="width:auto;padding:10px 14px;">Search</button>
+          </div>
+          <div class="toolbar">
+            <button id="refreshResBtn" class="btn-secondary" type="button" style="width:auto;">Refresh</button>
+            <button id="loadMoreResBtn" class="btn-secondary" type="button" style="width:auto;display:none;">Load older</button>
+            <span id="resCount" class="count"></span>
+          </div>
+          <div id="resources" class="list"></div>
         </section>
       </div>
     </div>
 
-    <div id="editModal" class="modal-backdrop" style="display:none;">
+    <!-- EDIT NOTICE MODAL -->
+    <div id="editModal" class="modal-backdrop hidden">
       <div class="modal">
         <h4 id="editModalTitle">Edit Notice</h4>
         <label class="label">Message Text</label>
         <textarea id="editText"></textarea>
         <div class="row three" style="margin-top:8px;">
-          <div>
-            <label class="label">Section</label>
-            <select id="editSection"></select>
-          </div>
-          <div>
-            <label class="label">Target Group</label>
-            <select id="editGroup"></select>
-          </div>
-          <div>
-            <label class="label">Sender Name</label>
-            <input id="editSender" />
-          </div>
+          <div><label class="label">Section</label><select id="editSection"></select></div>
+          <div><label class="label">Target Group</label><select id="editGroup"></select></div>
+          <div><label class="label">Sender Name</label><input id="editSender" /></div>
         </div>
         <label class="label" style="margin-top:8px;">Media URL</label>
         <input id="editMediaUrl" placeholder="Leave empty to remove media" />
@@ -304,10 +493,34 @@
       </div>
     </div>
 
+    <!-- CHANGE PASSWORD MODAL -->
+    <div id="passModal" class="modal-backdrop hidden">
+      <div class="modal" style="max-width:420px;">
+        <h4>Change Admin Password</h4>
+        <label class="label">Current password</label>
+        <input id="curPass" type="password" />
+        <label class="label">New password</label>
+        <input id="newPass" type="password" placeholder="At least 6 characters" />
+        <label class="label">Confirm new password</label>
+        <input id="confirmPass" type="password" />
+        <div class="row-actions close">
+          <button id="passSaveBtn">Update password</button>
+          <button id="passCancelBtn" class="btn-secondary" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <script>
       const els = {
-        baseUrl: document.getElementById('baseUrl'),
-        adminToken: document.getElementById('adminToken'),
+        loginScreen: document.getElementById('loginScreen'),
+        dashboard: document.getElementById('dashboard'),
+        loginUsername: document.getElementById('loginUsername'),
+        loginPassword: document.getElementById('loginPassword'),
+        loginBtn: document.getElementById('loginBtn'),
+        loginError: document.getElementById('loginError'),
+        adminName: document.getElementById('adminName'),
+        logoutBtn: document.getElementById('logoutBtn'),
+        changePassBtn: document.getElementById('changePassBtn'),
         senderName: document.getElementById('senderName'),
         section: document.getElementById('section'),
         targetGroup: document.getElementById('targetGroup'),
@@ -315,16 +528,17 @@
         text: document.getElementById('text'),
         mediaFile: document.getElementById('mediaFile'),
         sendBtn: document.getElementById('sendBtn'),
-        refreshBtn: document.getElementById('refreshBtn'),
+        pinNewBtn: document.getElementById('pinNewBtn'),
         status: document.getElementById('status'),
         messages: document.getElementById('messages'),
         searchBox: document.getElementById('searchBox'),
         filterSection: document.getElementById('filterSection'),
         filterGroup: document.getElementById('filterGroup'),
         searchBtn: document.getElementById('searchBtn'),
+        refreshNoticesBtn: document.getElementById('refreshNoticesBtn'),
         selectAllBtn: document.getElementById('selectAllBtn'),
         deleteSelectedBtn: document.getElementById('deleteSelectedBtn'),
-        loadMoreBtn: document.getElementById('loadMoreBtn'),
+        loadMoreNoticesBtn: document.getElementById('loadMoreNoticesBtn'),
         resultCount: document.getElementById('resultCount'),
         editModal: document.getElementById('editModal'),
         editModalTitle: document.getElementById('editModalTitle'),
@@ -337,32 +551,50 @@
         editPinned: document.getElementById('editPinned'),
         editSaveBtn: document.getElementById('editSaveBtn'),
         editCancelBtn: document.getElementById('editCancelBtn'),
+        passModal: document.getElementById('passModal'),
+        curPass: document.getElementById('curPass'),
+        newPass: document.getElementById('newPass'),
+        confirmPass: document.getElementById('confirmPass'),
+        passSaveBtn: document.getElementById('passSaveBtn'),
+        passCancelBtn: document.getElementById('passCancelBtn'),
+        resTitle: document.getElementById('resTitle'),
+        resCategory: document.getElementById('resCategory'),
+        resUploader: document.getElementById('resUploader'),
+        resDescription: document.getElementById('resDescription'),
+        resFile: document.getElementById('resFile'),
+        resUploadBtn: document.getElementById('resUploadBtn'),
+        resStatus: document.getElementById('resStatus'),
+        resources: document.getElementById('resources'),
+        resSearch: document.getElementById('resSearch'),
+        resFilterCategory: document.getElementById('resFilterCategory'),
+        resSearchBtn: document.getElementById('resSearchBtn'),
+        refreshResBtn: document.getElementById('refreshResBtn'),
+        loadMoreResBtn: document.getElementById('loadMoreResBtn'),
+        resCount: document.getElementById('resCount'),
       };
 
       const storage = {
-        get(k, fallback = '') { return localStorage.getItem(`vu-admin-${k}`) || fallback; },
+        get(k, f='') { return localStorage.getItem(`vu-admin-${k}`) || f; },
         set(k, v) { localStorage.setItem(`vu-admin-${k}`, v || ''); },
-      };
-
-      const state = {
-        notices: [],
-        loadedCount: 0,
-        totalCount: null,
-        nextBefore: null,
-        hasMore: false,
-        selected: new Set(),
-        editingId: null,
+        del(k) { localStorage.removeItem(`vu-admin-${k}`); },
       };
 
       const defaultBaseUrl = window.location?.origin || 'https://virtual-massaage-admin.vercel.app';
 
-      function baseUrl() {
-        return (els.baseUrl.value || defaultBaseUrl).replace(/\/+$/, '');
+      function baseUrl() { return (storage.get('baseUrl') || defaultBaseUrl).replace(/\/+$/, ''); }
+      function getToken() { return storage.get('token'); }
+      function authHeaders() {
+        const t = getToken();
+        return t ? { authorization: `Bearer ${t}` } : {};
+      }
+      function authJsonHeaders() {
+        return { ...authHeaders(), 'content-type': 'application/json', accept: 'application/json' };
       }
 
-      function setStatus(text, isError = false) {
-        els.status.textContent = text;
-        els.status.classList.toggle('danger', Boolean(isError));
+      function setStatus(el, text, isError=false) {
+        el.textContent = text;
+        el.classList.toggle('danger', isError);
+        el.classList.toggle('ok', !isError && /✅|success|sent|uploaded|deleted|updated|pinned|unpinned/i.test(text));
       }
 
       function addOptions(select, items) {
@@ -378,15 +610,83 @@
       async function api(path, options = {}) {
         const url = `${baseUrl()}${path}`;
         const headers = { ...(options.headers || {}) };
-        const token = els.adminToken.value.trim();
-        if (token) headers['x-admin-token'] = token;
-
+        const t = getToken();
+        if (t) headers.authorization = `Bearer ${t}`;
         const response = await fetch(url, { ...options, headers });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(data.error || `Request failed (${response.status})`);
+        if (response.status === 401) {
+          forceLogout();
+          throw new Error('Session expired. Please sign in again.');
         }
+        if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
         return data;
+      }
+
+      function forceLogout() {
+        storage.del('token');
+        showLogin();
+      }
+
+      function showLogin() {
+        els.loginScreen.classList.remove('hidden');
+        els.dashboard.classList.add('hidden');
+        els.loginError.textContent = '';
+      }
+
+      function showDashboard() {
+        els.loginScreen.classList.add('hidden');
+        els.dashboard.classList.remove('hidden');
+      }
+
+      async function tryRestoreSession() {
+        const token = getToken();
+        if (!token) return showLogin();
+        try {
+          const data = await fetch(`${baseUrl()}/api/admin/whoami`, { headers: authHeaders() });
+          if (!data.ok) throw new Error();
+          const json = await data.json();
+          if (json.authenticated) {
+            els.adminName.textContent = json.username;
+            showDashboard();
+            await initDashboard();
+          } else {
+            showLogin();
+          }
+        } catch { showLogin(); }
+      }
+
+      async function doLogin() {
+        els.loginError.textContent = '';
+        els.loginBtn.disabled = true;
+        try {
+          const res = await fetch(`${baseUrl()}/api/admin/login`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ username: els.loginUsername.value.trim(), password: els.loginPassword.value }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Login failed');
+          storage.set('token', data.token);
+          els.adminName.textContent = data.admin.username;
+          els.loginPassword.value = '';
+          showDashboard();
+          await initDashboard();
+        } catch (e) {
+          els.loginError.textContent = e.message;
+        } finally {
+          els.loginBtn.disabled = false;
+        }
+      }
+
+      async function initDashboard() {
+        try {
+          await loadMeta();
+          await loadMessages();
+          await loadResources();
+          setStatus(els.status, 'Connected. Ready to send notices.');
+        } catch (e) {
+          setStatus(els.status, e.message, true);
+        }
       }
 
       async function loadMeta() {
@@ -397,179 +697,148 @@
         addOptions(els.filterGroup, meta.groups);
         addOptions(els.editSection, meta.sections);
         addOptions(els.editGroup, meta.groups);
-
+        const cats = meta.resourceCategories || [];
+        addOptions(els.resCategory, cats);
+        addOptions(els.resFilterCategory, [{ key: 'all', label: 'All categories' }, ...cats]);
         els.section.value = storage.get('section', 'general');
         els.targetGroup.value = storage.get('targetGroup', 'all');
         els.filterSection.value = storage.get('filterSection', 'all');
         els.filterGroup.value = storage.get('filterGroup', 'all');
+        els.resCategory.value = storage.get('resCategory', 'assignment');
+        els.resFilterCategory.value = storage.get('resFilterCategory', 'all');
       }
 
-      function formatDate(iso) {
-        try { return new Date(iso).toLocaleString(); } catch { return iso; }
+      function formatDate(iso) { try { return new Date(iso).toLocaleString(); } catch { return iso; } }
+      function escapeHtml(v) {
+        return String(v || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
       }
-
-      function escapeHtml(value) {
-        return String(value || '')
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#39;');
-      }
-
       function linkify(text) {
-        const escaped = escapeHtml(text);
-        return escaped.replace(/(https?:\/\/[^\s<>"')]+)/gi, (url) => {
-          const safe = escapeHtml(url);
-          return `<a href="${safe}" target="_blank" rel="noopener">${safe}</a>`;
+        return escapeHtml(text).replace(/(https?:\/\/[^\s<>"')]+)/gi, (u) => {
+          const s = escapeHtml(u);
+          return `<a href="${s}" target="_blank" rel="noopener">${s}</a>`;
         });
       }
-
-      function mediaBadge(mediaType) {
-        if (!mediaType || mediaType === 'text') return '';
-        const icon = {
-          image: '🖼️',
-          video: '🎬',
-          audio: '🎵',
-          file: '📎',
-        }[mediaType] || '📎';
-        return `<span class="chip">${icon} ${mediaType.toUpperCase()}</span>`;
+      function mediaBadge(t) {
+        if (!t || t === 'text') return '';
+        const icon = { image: '🖼️', video: '🎬', audio: '🎵', file: '📎' }[t] || '📎';
+        return `<span class="chip">${icon} ${t.toUpperCase()}</span>`;
+      }
+      function fileIcon(t) {
+        return { image: '🖼️', video: '🎬', audio: '🎵', file: '📄' }[t] || '📄';
+      }
+      function sizeFmt(bytes) {
+        if (!bytes) return '';
+        const units = ['B','KB','MB','GB'];
+        let i = 0; while (bytes >= 1024 && i < units.length-1) { bytes /= 1024; i++; }
+        return `${bytes.toFixed(i ? 1 : 0)} ${units[i]}`;
       }
 
-      function renderMessages() {
-        const messages = state.notices;
+      // ---- NOTICES ----
+      const noticeState = { notices: [], nextBefore: null, hasMore: false, selected: new Set(), editingId: null, pinNew: false };
+
+      function noticeQuery() {
+        const p = new URLSearchParams();
+        const s = els.filterSection.value || 'all';
+        const g = els.filterGroup.value || 'all';
+        const q = els.searchBox.value.trim();
+        if (s !== 'all') p.set('section', s);
+        if (g !== 'all') p.set('group', g);
+        if (q) p.set('search', q);
+        return p;
+      }
+
+      async function loadMessages() {
+        const p = noticeQuery();
+        p.set('limit', '20'); p.set('total', 'true');
+        try {
+          const data = await api(`/api/messages?${p.toString()}`, { headers: { accept: 'application/json' } });
+          noticeState.notices = data.messages || [];
+          noticeState.nextBefore = data.nextBefore;
+          noticeState.hasMore = Boolean(data.hasMore);
+          noticeState.selected.clear();
+          renderNotices(data.total ?? null);
+        } catch (e) { setStatus(els.status, e.message, true); }
+      }
+
+      async function loadOlderNotices() {
+        if (!noticeState.hasMore || !noticeState.nextBefore) return;
+        const p = noticeQuery();
+        p.set('limit', '20'); p.set('before', noticeState.nextBefore);
+        try {
+          const data = await api(`/api/messages?${p.toString()}`, { headers: { accept: 'application/json' } });
+          const seen = new Set(noticeState.notices.map(m => m.id));
+          for (const m of (data.messages || [])) if (!seen.has(m.id)) noticeState.notices.push(m);
+          noticeState.nextBefore = data.nextBefore;
+          noticeState.hasMore = Boolean(data.hasMore);
+          renderNotices();
+        } catch (e) { setStatus(els.status, e.message, true); }
+      }
+
+      function renderNotices(total) {
+        const msgs = noticeState.notices;
         els.messages.innerHTML = '';
-        if (!messages.length) {
+        if (!msgs.length) {
           const item = document.createElement('div');
           item.className = 'item';
           item.textContent = 'No notices match the current filters.';
           els.messages.appendChild(item);
         }
-
-        for (const msg of messages) {
+        for (const msg of msgs) {
           const item = document.createElement('div');
           item.className = 'item';
-
           const mediaHtml = msg.mediaUrl
-            ? `<div style="margin-top:8px;"><a href="${escapeHtml(msg.mediaUrl)}" target="_blank" rel="noopener">Open ${escapeHtml(msg.mediaType) || 'media'}</a></div>`
-            : '';
-
+            ? `<div style="margin-top:8px;"><a href="${escapeHtml(msg.mediaUrl)}" target="_blank" rel="noopener">Open ${escapeHtml(msg.mediaType) || 'media'}</a></div>` : '';
           const pinBadge = msg.pinned ? '<span class="pin-badge">PINNED</span>' : '';
-          const checked = state.selected.has(msg.id) ? 'checked' : '';
-
+          const checked = noticeState.selected.has(msg.id) ? 'checked' : '';
           item.innerHTML = `
             <div class="row-head">
               <input type="checkbox" class="msg-select" data-id="${escapeHtml(msg.id)}" ${checked} />
               <div style="flex:1;">
                 <div class="meta">
-                  <span class="chip">${escapeHtml(msg.section || 'general')}</span>
+                  <span class="chip accent">${escapeHtml(msg.section || 'general')}</span>
                   <span class="chip">${escapeHtml(msg.targetGroup || 'all')}</span>
                   <span class="chip">${escapeHtml(msg.senderName || 'Admin')}</span>
-                  ${mediaBadge(msg.mediaType)}
-                  ${pinBadge}
+                  ${mediaBadge(msg.mediaType)} ${pinBadge}
                 </div>
                 <div class="notice-text">${linkify(msg.text || '')}</div>
                 <div class="muted" style="margin-top:6px;font-size:11.5px;">${escapeHtml(formatDate(msg.createdAt))}</div>
                 ${mediaHtml}
                 <div class="row-actions">
-                  <button class="btn-edit" data-action="edit" data-id="${escapeHtml(msg.id)}">Edit</button>
-                  <button class="btn-pin" data-action="pin" data-id="${escapeHtml(msg.id)}">${msg.pinned ? 'Unpin' : 'Pin'}</button>
-                  <button class="btn-delete" data-action="delete" data-id="${escapeHtml(msg.id)}">Delete</button>
+                  <button class="btn-secondary" data-action="edit" data-id="${escapeHtml(msg.id)}">Edit</button>
+                  <button class="btn-secondary" data-action="pin" data-id="${escapeHtml(msg.id)}">${msg.pinned ? 'Unpin' : 'Pin'}</button>
+                  <button class="btn-danger" data-action="delete" data-id="${escapeHtml(msg.id)}">Delete</button>
                 </div>
               </div>
-            </div>
-          `;
-
+            </div>`;
           els.messages.appendChild(item);
         }
-
-        els.resultCount.textContent = state.totalCount != null
-          ? `Showing ${messages.length} of ${state.totalCount}`
-          : `${messages.length} loaded`;
-        els.loadMoreBtn.style.display = state.hasMore ? '' : 'none';
-      }
-
-      function currentQuery() {
-        const params = new URLSearchParams();
-        const section = els.filterSection.value || 'all';
-        const group = els.filterGroup.value || 'all';
-        const search = els.searchBox.value.trim();
-        if (section !== 'all') params.set('section', section);
-        if (group !== 'all') params.set('group', group);
-        if (search) params.set('search', search);
-        return params;
-      }
-
-      async function loadMessages() {
-        const params = currentQuery();
-        params.set('limit', '20');
-        params.set('total', 'true');
-        try {
-          const data = await api(`/api/messages?${params.toString()}`, {
-            headers: { accept: 'application/json' },
-          });
-          state.notices = data.messages || [];
-          state.nextBefore = data.nextBefore;
-          state.hasMore = Boolean(data.hasMore);
-          state.totalCount = data.total ?? null;
-          state.selected.clear();
-          renderMessages();
-        } catch (error) {
-          setStatus(error.message || String(error), true);
-        }
-      }
-
-      async function loadOlder() {
-        if (!state.hasMore || !state.nextBefore) return;
-        const params = currentQuery();
-        params.set('limit', '20');
-        params.set('before', state.nextBefore);
-        try {
-          const data = await api(`/api/messages?${params.toString()}`, {
-            headers: { accept: 'application/json' },
-          });
-          const older = data.messages || [];
-          const seen = new Set(state.notices.map((m) => m.id));
-          for (const m of older) {
-            if (!seen.has(m.id)) state.notices.push(m);
-          }
-          state.nextBefore = data.nextBefore;
-          state.hasMore = Boolean(data.hasMore);
-          renderMessages();
-        } catch (error) {
-          setStatus(error.message || String(error), true);
-        }
+        if (total != null) els.resultCount.textContent = `Showing ${msgs.length} of ${total}`;
+        else els.resultCount.textContent = `${msgs.length} loaded`;
+        els.loadMoreNoticesBtn.style.display = noticeState.hasMore ? '' : 'none';
       }
 
       async function uploadMediaIfAny() {
         const file = els.mediaFile.files?.[0];
         if (!file) return { mediaUrl: '', mediaType: '' };
-        return uploadMediaFile(file);
+        return uploadFile(file);
       }
 
-      async function uploadMediaFile(file) {
+      async function uploadFile(file) {
         const form = new FormData();
         form.append('media', file);
-
         const res = await fetch(`${baseUrl()}/api/admin/upload`, {
-          method: 'POST',
-          headers: { 'x-admin-token': els.adminToken.value.trim() },
-          body: form,
+          method: 'POST', headers: authHeaders(), body: form,
         });
-
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(data.error || `Upload failed (${res.status})`);
-        }
+        if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
         return { mediaUrl: data.mediaUrl || '', mediaType: data.mediaType || '' };
       }
 
       async function sendNotice() {
-        setStatus('Sending notice...');
+        setStatus(els.status, 'Sending notice...');
         try {
           const uploaded = await uploadMediaIfAny();
           const forcedType = els.mediaType.value.trim();
-
           const payload = {
             text: els.text.value.trim(),
             senderName: els.senderName.value.trim() || 'VU Admin',
@@ -577,77 +846,51 @@
             targetGroup: els.targetGroup.value || 'all',
             mediaUrl: uploaded.mediaUrl,
             mediaType: forcedType || uploaded.mediaType,
-            pinned: false,
+            pinned: noticeState.pinNew,
           };
-
-          await api('/api/admin/messages', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
-
-          els.text.value = '';
-          els.mediaFile.value = '';
-          setStatus('Notice sent successfully ✅');
+          await api('/api/admin/messages', { method: 'POST', headers: authJsonHeaders(), body: JSON.stringify(payload) });
+          els.text.value = ''; els.mediaFile.value = '';
+          setStatus(els.status, 'Notice sent successfully ✅');
           await loadMessages();
-        } catch (error) {
-          setStatus(error.message || String(error), true);
-        }
+        } catch (e) { setStatus(els.status, e.message, true); }
       }
 
-      async function deleteMessage(id) {
-        const msg = state.notices.find((m) => m.id === id);
+      async function deleteNotice(id) {
+        const msg = noticeState.notices.find(m => m.id === id);
         const preview = msg ? `"${(msg.text || '').slice(0, 60)}"` : 'this notice';
         if (!confirm(`Delete ${preview}? This cannot be undone.`)) return;
         try {
           await api(`/api/admin/messages/${id}`, { method: 'DELETE' });
-          setStatus('Notice deleted 🗑️');
+          setStatus(els.status, 'Notice deleted 🗑️');
           await loadMessages();
-        } catch (error) {
-          setStatus(error.message || String(error), true);
-        }
+        } catch (e) { setStatus(els.status, e.message, true); }
       }
 
       async function togglePin(id) {
-        const msg = state.notices.find((m) => m.id === id);
+        const msg = noticeState.notices.find(m => m.id === id);
         if (!msg) return;
         try {
-          await api(`/api/admin/messages/${id}`, {
-            method: 'PATCH',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ pinned: !msg.pinned }),
-          });
-          setStatus(msg.pinned ? 'Notice unpinned' : 'Notice pinned 📌');
+          await api(`/api/admin/messages/${id}`, { method: 'PATCH', headers: authJsonHeaders(), body: JSON.stringify({ pinned: !msg.pinned }) });
+          setStatus(els.status, msg.pinned ? 'Notice unpinned' : 'Notice pinned 📌');
           await loadMessages();
-        } catch (error) {
-          setStatus(error.message || String(error), true);
-        }
+        } catch (e) { setStatus(els.status, e.message, true); }
       }
 
       async function deleteSelected() {
-        if (!state.selected.size) {
-          setStatus('Select notices first using the checkboxes.');
-          return;
-        }
-        const ids = Array.from(state.selected);
+        if (!noticeState.selected.size) return setStatus(els.status, 'Select notices first using the checkboxes.');
+        const ids = Array.from(noticeState.selected);
         if (!confirm(`Delete ${ids.length} notice(s)? This cannot be undone.`)) return;
         try {
-          const data = await api('/api/admin/messages', {
-            method: 'DELETE',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ ids }),
-          });
-          setStatus(`Deleted ${data.deleted} notice(s), removed ${data.mediaRemoved} media file(s) 🗑️`);
+          const data = await api('/api/admin/messages', { method: 'DELETE', headers: authJsonHeaders(), body: JSON.stringify({ ids }) });
+          setStatus(els.status, `Deleted ${data.deleted} notice(s), removed ${data.mediaRemoved} media 🗑️`);
           await loadMessages();
-        } catch (error) {
-          setStatus(error.message || String(error), true);
-        }
+        } catch (e) { setStatus(els.status, e.message, true); }
       }
 
       function openEditModal(id) {
-        const msg = state.notices.find((m) => m.id === id);
+        const msg = noticeState.notices.find(m => m.id === id);
         if (!msg) return;
-        state.editingId = id;
+        noticeState.editingId = id;
         els.editModalTitle.textContent = 'Edit Notice';
         els.editText.value = msg.text || '';
         els.editSection.value = msg.section || 'general';
@@ -656,17 +899,13 @@
         els.editMediaUrl.value = msg.mediaUrl || '';
         els.editMediaFile.value = '';
         els.editPinned.checked = Boolean(msg.pinned);
-        els.editModal.style.display = 'flex';
+        els.editModal.classList.remove('hidden');
       }
-
-      function closeEditModal() {
-        state.editingId = null;
-        els.editModal.style.display = 'none';
-      }
+      function closeEditModal() { noticeState.editingId = null; els.editModal.classList.add('hidden'); }
 
       async function saveEdit() {
-        if (!state.editingId) return;
-        const id = state.editingId;
+        if (!noticeState.editingId) return;
+        const id = noticeState.editingId;
         const payload = {
           text: els.editText.value.trim(),
           section: els.editSection.value || 'general',
@@ -675,105 +914,225 @@
           mediaUrl: els.editMediaUrl.value.trim(),
           pinned: els.editPinned.checked,
         };
-
         const file = els.editMediaFile.files?.[0];
         if (file) {
-          try {
-            const uploaded = await uploadMediaFile(file);
-            payload.mediaUrl = uploaded.mediaUrl;
-          } catch (error) {
-            setStatus(error.message || String(error), true);
-            return;
-          }
+          try { const u = await uploadFile(file); payload.mediaUrl = u.mediaUrl; }
+          catch (e) { return setStatus(els.status, e.message, true); }
         }
-
         try {
-          await api(`/api/admin/messages/${id}`, {
-            method: 'PATCH',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
-          setStatus('Notice updated ✅');
+          await api(`/api/admin/messages/${id}`, { method: 'PATCH', headers: authJsonHeaders(), body: JSON.stringify(payload) });
+          setStatus(els.status, 'Notice updated ✅');
           closeEditModal();
           await loadMessages();
-        } catch (error) {
-          setStatus(error.message || String(error), true);
-        }
+        } catch (e) { setStatus(els.status, e.message, true); }
       }
 
-      function bindPersistence() {
-        const mapping = [
-          ['baseUrl', els.baseUrl],
-          ['adminToken', els.adminToken],
-          ['senderName', els.senderName],
-          ['section', els.section],
-          ['targetGroup', els.targetGroup],
-          ['filterSection', els.filterSection],
-          ['filterGroup', els.filterGroup],
-        ];
+      // ---- RESOURCES ----
+      const resState = { resources: [], nextBefore: null, hasMore: false };
 
-        for (const [key, el] of mapping) {
-          const value = storage.get(key);
-          if (value) el.value = value;
-          el.addEventListener('change', () => storage.set(key, el.value));
-          el.addEventListener('input', () => storage.set(key, el.value));
-        }
+      function resQuery() {
+        const p = new URLSearchParams();
+        const c = els.resFilterCategory.value || 'all';
+        const q = els.resSearch.value.trim();
+        if (c !== 'all') p.set('category', c);
+        if (q) p.set('search', q);
+        return p;
       }
 
-      async function init() {
+      async function loadResources() {
+        const p = resQuery();
+        p.set('limit', '20'); p.set('total', 'true');
         try {
-          bindPersistence();
-          await loadMeta();
-          await loadMessages();
-          setStatus('Connected. Ready to send notices.');
-        } catch (error) {
-          setStatus(error.message || String(error), true);
-        }
+          const data = await api(`/api/admin/resources?${p.toString()}`, { headers: { accept: 'application/json' } });
+          resState.resources = data.resources || [];
+          resState.nextBefore = data.nextBefore;
+          resState.hasMore = Boolean(data.hasMore);
+          renderResources(data.total ?? null);
+        } catch (e) { setStatus(els.resStatus, e.message, true); }
       }
 
-      els.sendBtn.addEventListener('click', sendNotice);
-      els.refreshBtn.addEventListener('click', () => loadMessages().catch((e) => setStatus(e.message, true)));
-      els.searchBtn.addEventListener('click', () => loadMessages().catch((e) => setStatus(e.message, true)));
-      els.searchBox.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') loadMessages().catch((err) => setStatus(err.message, true));
-      });
-      els.filterSection.addEventListener('change', () => loadMessages().catch((e) => setStatus(e.message, true)));
-      els.filterGroup.addEventListener('change', () => loadMessages().catch((e) => setStatus(e.message, true)));
-      els.loadMoreBtn.addEventListener('click', loadOlder);
-      els.selectAllBtn.addEventListener('click', () => {
-        if (state.selected.size === state.notices.length) {
-          state.selected.clear();
-        } else {
-          state.notices.forEach((m) => state.selected.add(m.id));
+      async function loadOlderResources() {
+        if (!resState.hasMore || !resState.nextBefore) return;
+        const p = resQuery();
+        p.set('limit', '20'); p.set('before', resState.nextBefore);
+        try {
+          const data = await api(`/api/admin/resources?${p.toString()}`, { headers: { accept: 'application/json' } });
+          const seen = new Set(resState.resources.map(r => r.id));
+          for (const r of (data.resources || [])) if (!seen.has(r.id)) resState.resources.push(r);
+          resState.nextBefore = data.nextBefore;
+          resState.hasMore = Boolean(data.hasMore);
+          renderResources();
+        } catch (e) { setStatus(els.resStatus, e.message, true); }
+      }
+
+      function renderResources(total) {
+        const items = resState.resources;
+        els.resources.innerHTML = '';
+        if (!items.length) {
+          const item = document.createElement('div');
+          item.className = 'item';
+          item.textContent = 'No resources uploaded yet.';
+          els.resources.appendChild(item);
         }
-        renderMessages();
-      });
-      els.deleteSelectedBtn.addEventListener('click', deleteSelected);
-      els.editSaveBtn.addEventListener('click', saveEdit);
-      els.editCancelBtn.addEventListener('click', closeEditModal);
-      els.editModal.addEventListener('click', (e) => {
-        if (e.target === els.editModal) closeEditModal();
-      });
+        for (const r of items) {
+          const item = document.createElement('div');
+          item.className = 'item';
+          const srcBadge = r.source === 'admin'
+            ? '<span class="chip admin">Admin</span>'
+            : '<span class="chip user">User</span>';
+          item.innerHTML = `
+            <div class="row-head" style="gap:12px;">
+              <div style="font-size:26px;">${fileIcon(r.mediaType)}</div>
+              <div style="flex:1;">
+                <div class="meta">
+                  <span class="chip accent">${escapeHtml(r.category)}</span>
+                  ${srcBadge}
+                  ${r.mediaType ? `<span class="chip">${r.mediaType.toUpperCase()}</span>` : ''}
+                </div>
+                <div style="font-weight:700;font-size:14.5px;">${escapeHtml(r.title)}</div>
+                ${r.description ? `<div class="notice-text" style="margin-top:4px;">${linkify(r.description)}</div>` : ''}
+                <div class="muted" style="margin-top:6px;font-size:11.5px;">
+                  ${escapeHtml(r.uploaderName || 'Unknown')} · ${escapeHtml(formatDate(r.createdAt))} ${r.fileSize ? '· ' + sizeFmt(r.fileSize) : ''}
+                </div>
+                <div class="row-actions">
+                  <a href="${escapeHtml(r.mediaUrl)}" target="_blank" rel="noopener"><button class="btn-secondary" type="button" style="display:inline-flex;align-items:center;text-decoration:none;">Open</button></a>
+                  <button class="btn-danger" data-action="delete-res" data-id="${escapeHtml(r.id)}">Delete</button>
+                </div>
+              </div>
+            </div>`;
+          els.resources.appendChild(item);
+        }
+        if (total != null) els.resCount.textContent = `Showing ${items.length} of ${total}`;
+        else els.resCount.textContent = `${items.length} loaded`;
+        els.loadMoreResBtn.style.display = resState.hasMore ? '' : 'none';
+      }
 
-      els.messages.addEventListener('click', (e) => {
-        const btn = e.target.closest('button[data-action]');
-        if (!btn) return;
-        const id = btn.dataset.id;
-        const action = btn.dataset.action;
-        if (action === 'edit') openEditModal(id);
-        else if (action === 'delete') deleteMessage(id);
-        else if (action === 'pin') togglePin(id);
-      });
+      async function uploadResource() {
+        setStatus(els.resStatus, 'Uploading resource...');
+        const file = els.resFile.files?.[0];
+        if (!file) return setStatus(els.resStatus, 'Please choose a file.', true);
+        const title = els.resTitle.value.trim();
+        if (!title) return setStatus(els.resStatus, 'Title is required.', true);
+        try {
+          const form = new FormData();
+          form.append('title', title);
+          form.append('category', els.resCategory.value || 'other');
+          form.append('description', els.resDescription.value.trim());
+          form.append('uploaderName', els.resUploader.value.trim() || 'Admin');
+          form.append('file', file);
+          const res = await fetch(`${baseUrl()}/api/admin/resources`, { method: 'POST', headers: authHeaders(), body: form });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
+          els.resTitle.value = ''; els.resDescription.value = ''; els.resFile.value = '';
+          setStatus(els.resStatus, 'Resource uploaded ✅');
+          await loadResources();
+        } catch (e) { setStatus(els.resStatus, e.message, true); }
+      }
 
-      els.messages.addEventListener('change', (e) => {
-        const box = e.target.closest('input.msg-select');
-        if (!box) return;
-        const id = box.dataset.id;
-        if (box.checked) state.selected.add(id);
-        else state.selected.delete(id);
-      });
+      async function deleteResource(id) {
+        const r = resState.resources.find(x => x.id === id);
+        if (!confirm(`Delete resource "${r ? r.title : ''}"? This cannot be undone.`)) return;
+        try {
+          await api(`/api/admin/resources/${id}`, { method: 'DELETE' });
+          setStatus(els.resStatus, 'Resource deleted 🗑️');
+          await loadResources();
+        } catch (e) { setStatus(els.resStatus, e.message, true); }
+      }
 
-      init();
+      // ---- CHANGE PASSWORD ----
+      function openPassModal() { els.curPass.value=''; els.newPass.value=''; els.confirmPass.value=''; els.passModal.classList.remove('hidden'); }
+      function closePassModal() { els.passModal.classList.add('hidden'); }
+      async function savePassword() {
+        if (els.newPass.value !== els.confirmPass.value) return alert('New passwords do not match.');
+        if (els.newPass.value.length < 6) return alert('New password must be at least 6 characters.');
+        try {
+          const data = await api('/api/admin/change-password', {
+            method: 'POST', headers: authJsonHeaders(),
+            body: JSON.stringify({ currentPassword: els.curPass.value, newPassword: els.newPass.value }),
+          });
+          alert('Password updated. Use the new password next time you sign in.');
+          closePassModal();
+        } catch (e) { alert(e.message); }
+      }
+
+      // ---- TABS ----
+      function switchTab(name) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+        els.tabNotices.classList.toggle('hidden', name !== 'notices');
+        els.tabResources.classList.toggle('hidden', name !== 'resources');
+        if (name === 'resources') loadResources();
+      }
+
+      // ---- BIND ----
+      function bind() {
+        els.loginBtn.addEventListener('click', doLogin);
+        els.loginPassword.addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+        els.logoutBtn.addEventListener('click', forceLogout);
+        els.changePassBtn.addEventListener('click', openPassModal);
+        els.passSaveBtn.addEventListener('click', savePassword);
+        els.passCancelBtn.addEventListener('click', closePassModal);
+        els.passModal.addEventListener('click', (e) => { if (e.target === els.passModal) closePassModal(); });
+
+        document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+
+        els.sendBtn.addEventListener('click', sendNotice);
+        els.refreshNoticesBtn.addEventListener('click', () => loadMessages().catch(e => setStatus(els.status, e.message, true)));
+        els.searchBtn.addEventListener('click', () => loadMessages().catch(e => setStatus(els.status, e.message, true)));
+        els.searchBox.addEventListener('keydown', (e) => { if (e.key === 'Enter') loadMessages().catch(err => setStatus(els.status, err.message, true)); });
+        els.filterSection.addEventListener('change', () => loadMessages().catch(e => setStatus(els.status, e.message, true)));
+        els.filterGroup.addEventListener('change', () => loadMessages().catch(e => setStatus(els.status, e.message, true)));
+        els.loadMoreNoticesBtn.addEventListener('click', loadOlderNotices);
+        els.pinNewBtn.addEventListener('click', () => {
+          noticeState.pinNew = !noticeState.pinNew;
+          els.pinNewBtn.textContent = `Pin on send: ${noticeState.pinNew ? 'on' : 'off'}`;
+        });
+        els.selectAllBtn.addEventListener('click', () => {
+          if (noticeState.selected.size === noticeState.notices.length) noticeState.selected.clear();
+          else noticeState.notices.forEach(m => noticeState.selected.add(m.id));
+          renderNotices();
+        });
+        els.deleteSelectedBtn.addEventListener('click', deleteSelected);
+        els.editSaveBtn.addEventListener('click', saveEdit);
+        els.editCancelBtn.addEventListener('click', closeEditModal);
+        els.editModal.addEventListener('click', (e) => { if (e.target === els.editModal) closeEditModal(); });
+
+        els.messages.addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const id = btn.dataset.id;
+          const a = btn.dataset.action;
+          if (a === 'edit') openEditModal(id);
+          else if (a === 'delete') deleteNotice(id);
+          else if (a === 'pin') togglePin(id);
+        });
+        els.messages.addEventListener('change', (e) => {
+          const box = e.target.closest('input.msg-select');
+          if (!box) return;
+          if (box.checked) noticeState.selected.add(box.dataset.id);
+          else noticeState.selected.delete(box.dataset.id);
+        });
+
+        // Resources
+        els.resUploadBtn.addEventListener('click', uploadResource);
+        els.refreshResBtn.addEventListener('click', () => loadResources().catch(e => setStatus(els.resStatus, e.message, true)));
+        els.resSearchBtn.addEventListener('click', () => loadResources().catch(e => setStatus(els.resStatus, e.message, true)));
+        els.resSearch.addEventListener('keydown', (e) => { if (e.key === 'Enter') loadResources().catch(err => setStatus(els.resStatus, err.message, true)); });
+        els.resFilterCategory.addEventListener('change', () => loadResources().catch(e => setStatus(els.resStatus, e.message, true)));
+        els.loadMoreResBtn.addEventListener('click', loadOlderResources);
+        els.resources.addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action="delete-res"]');
+          if (!btn) return;
+          deleteResource(btn.dataset.id);
+        });
+
+        // persist filter selections
+        [['section', els.section], ['targetGroup', els.targetGroup], ['filterSection', els.filterSection], ['filterGroup', els.filterGroup], ['resCategory', els.resCategory], ['resFilterCategory', els.resFilterCategory]].forEach(([k, el]) => {
+          el.addEventListener('change', () => storage.set(k, el.value));
+        });
+      }
+
+      bind();
+      tryRestoreSession();
     </script>
   </body>
 </html>
