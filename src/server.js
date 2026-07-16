@@ -192,7 +192,7 @@ const _firebaseJwks = new jose.createRemoteJWKSet(
 async function verifyFirebaseUser(idToken) {
   if (!idToken) throw new Error('Missing id token.');
   const { payload } = await jose.jwtVerify(idToken, _firebaseJwks, {
-    issuer: `https://securetoken.googleapis.com/${FIREBASE_PROJECT_ID}`,
+    issuer: `https://securetoken.google.com/${FIREBASE_PROJECT_ID}`,
     audience: FIREBASE_PROJECT_ID,
   });
   return {
