@@ -145,6 +145,12 @@ async function seedAdminIfNeeded() {
         passwordHash: await hashPassword(ADMIN_PASSWORD),
         updatedAt: new Date(),
       });
+    } else if (!verifyPassword(ADMIN_PASSWORD, existing.passwordHash)) {
+      // .env password changed since last boot — resync the stored hash.
+      await admins.updateOne(
+        { _id: existing._id },
+        { $set: { passwordHash: await hashPassword(ADMIN_PASSWORD), updatedAt: new Date() } },
+      );
     }
   } catch (error) {
     console.error('Admin seed failed:', error.message);
