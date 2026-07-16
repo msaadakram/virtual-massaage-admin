@@ -971,6 +971,9 @@ app.post('/api/resources', upload.single('file'), async (req, res) => {
   let user;
   try {
     const idToken = (req.headers['x-user-token'] || '').toString().trim();
+    const preview = idToken.slice(0, 12);
+    const dots = (idToken.match(/\./g) || []).length;
+    console.error(`[resources] token check: len=${idToken.length} dots=${dots} head="${preview}"`);
     user = await verifyFirebaseUser(idToken);
   } catch (error) {
     console.error('[resources] user token verification failed:', error.message);
