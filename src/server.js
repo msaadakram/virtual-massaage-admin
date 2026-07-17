@@ -399,6 +399,21 @@ app.get('/api/meta', (_req, res) => {
   });
 });
 
+function _friendlyUpstreamError(error, status) {
+  const raw = (error?.message || String(error || '')).trim();
+  const code = Number(status) || 0;
+  const hint = (() => {
+    if (code === 429) return 'The AI service is busy right now (rate limit). Please wait a moment and try again.';
+    if (code === 401 || code === 403) return 'The AI service rejected the server credentials. Please contact support.';
+    if (code === 404) return 'The selected AI model is unavailable. Please try again later.';
+    if (code === 400) return 'The request was rejected by the AI service.';
+    if (code >= 500) return 'The AI service is having trouble right now. Please try again shortly.';
+    if (/timeout|aborted|ECONNRESET|fetch failed|ETIMEDOUT/i.test(raw)) return 'Could not reach the AI service. Check your connection and try again.';
+    return 'The AI assistant hit an unexpected error. Please try again.';
+  })();
+  return { error: hint, detail: raw ? raw.slice(0, 300) : '' };
+}
+
 app.post('/api/ai/chat', async (req, res) => {
   try {
     const idToken = (req.headers['x-user-token'] || '').toString().trim();
@@ -470,7 +485,7 @@ app.post('/api/ai/chat', async (req, res) => {
       });
     } catch (error) {
       req.off('close', onClose);
-      writeSse({ error: `Upstream request failed: ${error.message}` });
+      writeSse(_friendlyUpstreamError(error, 0));
       writeSse({ done: true });
       res.end();
       return;
@@ -478,8 +493,17 @@ app.post('/api/ai/chat', async (req, res) => {
 
     if (!upstream.ok || !upstream.body) {
       req.off('close', onClose);
-      const errText = await upstream.text().catch(() => '');
-      writeSse({ error: `Upstream error ${upstream.status}: ${errText.slice(0, 500)}` });
+      let errDetail = '';
+      try {
+        const errText = await upstream.text();
+        errDetail = errText.slice(0, 800);
+        // try to pull a structured message out of the upstream JSON error
+        try {
+          const parsed = JSON.parse(errText);
+          if (parsed?.error?.message) errDetail = parsed.error.message;
+        } catch (_) {}
+      } catch (_) {}
+      writeSse(_friendlyUpstreamError(new Error(errDetail || `status ${upstream.status}`), upstream.status));
       writeSse({ done: true });
       res.end();
       return;
@@ -516,7 +540,7 @@ app.post('/api/ai/chat', async (req, res) => {
       }
     } catch (error) {
       if (!clientClosed) {
-        writeSse({ error: `Stream read failed: ${error.message}` });
+        writeSse(_friendlyUpstreamError(error, 0));
       }
     }
 
